@@ -8,7 +8,7 @@ import { CattleCard } from '@/components/cattle/CattleCard';
 import { CattleTable } from '@/components/cattle/CattleTable';
 import { CattleQrModal } from '@/components/cattle/CattleQrModal';
 import { Cattle } from '@/lib/useCattleStore';
-import { Plus, Download, Scan, AlertTriangle, Archive, X, Loader2, DollarSign } from 'lucide-react';
+import { Plus, Download, Scan, AlertTriangle, Archive, X, Loader2, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CattleListPage() {
@@ -16,10 +16,17 @@ export default function CattleListPage() {
   const [selectedCattleForQr, setSelectedCattleForQr] = useState<Cattle | null>(null);
   const [cattleToArchive, setCattleToArchive] = useState<Cattle | null>(null);
   const [archiveReason, setArchiveReason] = useState('Terjual');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchCattle();
   }, [fetchCattle]);
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters]);
 
   // Filter Logic
   const filteredCattle = cattle.filter((c) => {
@@ -31,9 +38,17 @@ export default function CattleListPage() {
     const matchesStatus = filters.status === 'ALL' ? c.status !== 'ARSIP' && c.status !== 'TERJUAL' : c.status === filters.status;
     const matchesBreed = filters.breed === 'ALL' ? true : c.breed === filters.breed;
     const matchesPen = filters.pen === 'ALL' ? true : c.pen === filters.pen;
+    const matchesGender = filters.gender === 'ALL' ? true : c.gender === filters.gender;
     
-    return matchesSearch && matchesStatus && matchesBreed && matchesPen;
+    return matchesSearch && matchesStatus && matchesBreed && matchesPen && matchesGender;
   });
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredCattle.length / itemsPerPage);
+  const paginatedCattle = filteredCattle.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleConfirmArchive = () => {
     if (cattleToArchive) {
@@ -111,27 +126,71 @@ export default function CattleListPage() {
             <Loader2 className="w-12 h-12 animate-spin mb-4" />
             <p className="font-bold">Memuat Data Sapi...</p>
           </div>
-        ) : filteredCattle.length > 0 ? (
-          viewMode === 'card' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-500">
-              {filteredCattle.map((item) => (
-                <CattleCard 
-                  key={item.id} 
-                  cattle={item} 
+        ) : paginatedCattle.length > 0 ? (
+          <div className="space-y-8">
+            {viewMode === 'card' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-500">
+                {paginatedCattle.map((item) => (
+                  <CattleCard 
+                    key={item.id} 
+                    cattle={item} 
+                    onShowQr={setSelectedCattleForQr}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="animate-in fade-in duration-500">
+                <CattleTable 
+                  cattle={paginatedCattle} 
                   onShowQr={setSelectedCattleForQr}
+                  onArchive={setCattleToArchive}
+                  onUnarchive={(c) => unarchiveCattle(c.id)}
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="animate-in fade-in duration-500">
-              <CattleTable 
-                cattle={filteredCattle} 
-                onShowQr={setSelectedCattleForQr}
-                onArchive={setCattleToArchive}
-                onUnarchive={(c) => unarchiveCattle(c.id)}
-              />
-            </div>
-          )
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6 border-t border-[#DDE7E1]">
+                <p className="text-sm text-[#68746D]">
+                  Menampilkan <span className="font-bold text-[#17211B]">{(currentPage - 1) * itemsPerPage + 1}</span> sampai <span className="font-bold text-[#17211B]">{Math.min(currentPage * itemsPerPage, filteredCattle.length)}</span> dari <span className="font-bold text-[#17211B]">{filteredCattle.length}</span> sapi
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 border-2 border-[#DDE7E1] rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F7FAF8] transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button
+                        key={i + 1}
+                        onClick={() => setCurrentPage(i + 1)}
+                        className={`w-10 h-10 rounded-xl font-bold transition-all ${
+                          currentPage === i + 1 
+                            ? 'bg-[#006B3F] text-white' 
+                            : 'hover:bg-[#EAF6F0] text-[#68746D]'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border-2 border-[#DDE7E1] rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F7FAF8] transition-all"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="py-20 flex flex-col items-center text-center">
             <div className="w-20 h-20 bg-[#F7FAF8] rounded-full flex items-center justify-center mb-6">
