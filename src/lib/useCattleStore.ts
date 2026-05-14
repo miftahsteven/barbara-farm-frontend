@@ -31,8 +31,17 @@ export interface Cattle {
   updatedAt: string;
 }
 
+export interface ScanHistoryItem {
+  id: string;
+  cattleId: string;
+  name: string;
+  status: 'success' | 'failed';
+  timestamp: number;
+}
+
 interface CattleState {
   cattle: Cattle[];
+  scanHistory: ScanHistoryItem[];
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
@@ -54,10 +63,12 @@ interface CattleState {
   archiveCattle: (id: string, reason: string) => Promise<void>;
   unarchiveCattle: (id: string) => Promise<void>;
   deleteCattle: (id: string) => Promise<void>;
+  addToScanHistory: (item: Omit<ScanHistoryItem, 'id' | 'timestamp'>) => void;
 }
 
 export const useCattleStore = create<CattleState>((set, get) => ({
   cattle: [],
+  scanHistory: [],
   isLoading: false,
   error: null,
   searchQuery: '',
@@ -162,4 +173,34 @@ export const useCattleStore = create<CattleState>((set, get) => ({
       cattle: state.cattle.filter((c) => c.id !== id)
     }));
   },
+
+  addToScanHistory: (item) => {
+    const newItem: ScanHistoryItem = {
+      ...item,
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp: Date.now(),
+    };
+    
+    set((state) => {
+      const newHistory = [newItem, ...state.scanHistory].slice(0, 10);
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cattle_scan_history', JSON.stringify(newHistory));
+      }
+      return { scanHistory: newHistory };
+    });
+  },
 }));
+
+// Initialize scan history from localStorage if available
+if (typeof window !== 'undefined') {
+  const savedHistory = localStorage.getItem('cattle_scan_history');
+  if (savedHistory) {
+    try {
+      const parsed = JSON.parse(savedHistory);
+      useCattleStore.setState({ scanHistory: parsed });
+    } catch (e) {
+      console.error('Failed to parse scan history', e);
+    }
+  }
+}

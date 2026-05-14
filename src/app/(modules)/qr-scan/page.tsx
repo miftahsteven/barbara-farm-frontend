@@ -66,6 +66,11 @@ function QRScanPageContent() {
       setIsRegistering(false);
       setPendingQrId(null);
       setError(null);
+      useCattleStore.getState().addToScanHistory({
+        cattleId: foundCattle.id,
+        name: foundCattle.name || 'Tanpa Nama',
+        status: 'success'
+      });
       toast.success("Sapi ditemukan!");
     } else {
       // ID not found - trigger registration flow
@@ -73,6 +78,11 @@ function QRScanPageContent() {
       setIsRegistering(true);
       setScannedCattle(null);
       setError(null);
+      useCattleStore.getState().addToScanHistory({
+        cattleId: cattleId,
+        name: 'Tidak dikenal',
+        status: 'failed'
+      });
       toast.info("ID baru terdeteksi. Silakan daftarkan sapi ini.");
     }
   };
