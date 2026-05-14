@@ -286,7 +286,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                 <div className="p-8 bg-white rounded-[2.5rem] border-2 border-[#DDE7E1] mb-8 shadow-xl">
                   <div className="w-64 h-64 flex items-center justify-center">
                     <QRCodeSVG 
-                      value={cattleData.id}
+                      value={process.env.NEXT_PUBLIC_FRONTEND_URL ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/cattle/${encodeURIComponent(cattleData.id)}` : `https://barbara.mscode.id/cattle/${encodeURIComponent(cattleData.id)}`}
                       size={200}
                       level="H"
                       includeMargin={false}

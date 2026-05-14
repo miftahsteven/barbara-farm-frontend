@@ -12,9 +12,9 @@ interface CattleQrModalProps {
 export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose }) => {
   if (!cattle) return null;
 
-  const profileUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/cattle/${encodeURIComponent(cattle.id)}`
-    : `barbarafarm.id/cattle/${cattle.id}`;
+  const profileUrl = process.env.NEXT_PUBLIC_FRONTEND_URL
+    ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/cattle/${encodeURIComponent(cattle.id)}`
+    : `https://barbara.mscode.id/cattle/${encodeURIComponent(cattle.id)}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
@@ -50,7 +50,7 @@ export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose })
           {/* QR Container */}
           <div className="relative aspect-square max-w-[240px] mx-auto mb-8 bg-white rounded-3xl border-2 border-[#DDE7E1] p-6 flex flex-col items-center justify-center shadow-inner">
             <QRCodeSVG 
-              value={cattle.id}
+              value={profileUrl}
               size={180}
               level="H"
               includeMargin={false}
