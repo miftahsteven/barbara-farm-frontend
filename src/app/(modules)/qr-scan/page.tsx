@@ -56,6 +56,9 @@ function QRScanPageContent() {
     // Clean up any trailing slashes or query params
     cattleId = cattleId.split('?')[0].split('#')[0].replace(/\/$/, '');
     
+    // Decode URL-encoded characters (like %20 to space)
+    cattleId = decodeURIComponent(cattleId);
+    
     const foundCattle = cattle.find(c => c.id === cattleId || c.qrUrl === result);
     
     if (foundCattle) {
