@@ -47,9 +47,14 @@ function QRScanPageContent() {
     let cattleId = result;
     if (result.includes('/cattle/')) {
       cattleId = result.split('/cattle/').pop() || result;
+    } else if (result.includes('/c/')) {
+      cattleId = result.split('/c/').pop() || result;
     } else if (result.includes(':')) {
       cattleId = result.split(':').pop() || result;
     }
+    
+    // Clean up any trailing slashes or query params
+    cattleId = cattleId.split('?')[0].split('#')[0].replace(/\/$/, '');
     
     const foundCattle = cattle.find(c => c.id === cattleId || c.qrUrl === result);
     
