@@ -149,6 +149,8 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
 
   const handleKtpGenerated = useCallback((code: string, parts: any, damId?: string) => {
     setGeneratedKtp(code);
+    if (!parts) return;
+    
     setFormData(p => ({
       ...p,
       breed: parts.breedCode,
