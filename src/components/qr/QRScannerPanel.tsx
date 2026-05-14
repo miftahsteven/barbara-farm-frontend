@@ -40,7 +40,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
         const html5QrCode = new Html5Qrcode("reader");
         html5QrCodeRef.current = html5QrCode;
 
-        const config = { 
+        const config: any = { 
           fps: 15, 
           qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
@@ -76,7 +76,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
           if (html5QrCodeRef.current) {
              await html5QrCodeRef.current.start(
               { facingMode: "user" },
-              { fps: 15, qrbox: { width: 250, height: 250 }, disableFlip: true, useBarCodeDetectorIfSupported: true },
+              { fps: 15, qrbox: { width: 250, height: 250 }, disableFlip: true, useBarCodeDetectorIfSupported: true } as any,
               (decodedText) => { onScanSuccess(decodedText); stopScanning(); },
               () => {}
             );
