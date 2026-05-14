@@ -16,10 +16,9 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
   onScanError, 
   onReset 
 }) => {
-  const [isScanning, setIsScanning] = useState(false);
+  const [scannerState, setScannerState] = useState<'idle' | 'starting' | 'scanning' | 'stopping'>('idle');
   const [isInitializing, setIsInitializing] = useState(false);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
-  const isTransitioning = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -30,13 +29,12 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
   }, []);
 
   const startScanning = async () => {
-    if (isScanning || isTransitioning.current) return;
+    if (scannerState !== 'idle') return;
     
-    isTransitioning.current = true;
+    setScannerState('starting');
     setIsInitializing(true);
-    setIsScanning(true);
     
-    // Small delay to ensure the div is rendered
+    // Small delay to ensure the div is rendered by React
     setTimeout(async () => {
       try {
         const html5QrCode = new Html5Qrcode("reader");
@@ -70,8 +68,8 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
           }
         );
 
+        setScannerState('scanning');
         setIsInitializing(false);
-        isTransitioning.current = false;
       } catch (err) {
         console.error("Scanner init error", err);
         // Fallback to any camera if environment camera fails
@@ -83,8 +81,8 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
               (decodedText) => { onScanSuccess(decodedText); stopScanning(); },
               () => {}
             );
+            setScannerState('scanning');
             setIsInitializing(false);
-            isTransitioning.current = false;
             return;
           }
         } catch (fallbackErr) {
@@ -92,33 +90,35 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
         }
         
         onScanError('camera');
-        setIsScanning(false);
+        setScannerState('idle');
         setIsInitializing(false);
-        isTransitioning.current = false;
         toast.error("Gagal mengaktifkan kamera. Pastikan izin diberikan.");
       }
-    }, 100);
+    }, 150);
   };
 
   const stopScanning = async () => {
-    if (isTransitioning.current) return;
+    if (scannerState !== 'scanning') {
+      if (scannerState === 'starting') {
+        setScannerState('idle');
+      }
+      return;
+    }
     
+    setScannerState('stopping');
     if (html5QrCodeRef.current) {
       try {
-        isTransitioning.current = true;
         if (html5QrCodeRef.current.isScanning) {
           await html5QrCodeRef.current.stop();
         }
-        setIsScanning(false);
         html5QrCodeRef.current = null;
-        isTransitioning.current = false;
+        setScannerState('idle');
       } catch (err) {
         console.error("Stop error", err);
-        setIsScanning(false);
-        isTransitioning.current = false;
+        setScannerState('idle');
       }
     } else {
-      setIsScanning(false);
+      setScannerState('idle');
     }
   };
 
@@ -137,7 +137,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
 
       {/* Viewport Area */}
       <div className="relative aspect-square bg-[#17211B] flex flex-col items-center justify-center overflow-hidden">
-        {!isScanning ? (
+        {scannerState === 'idle' ? (
           <div className="text-center p-8 space-y-6 w-full max-w-sm">
             <div className="w-20 h-20 bg-primary-green/20 rounded-full flex items-center justify-center mx-auto border border-primary-green/30">
               <Camera className="w-10 h-10 text-primary-green" />
