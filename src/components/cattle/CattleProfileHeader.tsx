@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Cattle } from '@/data/dummy-cattle';
+import { Cattle } from '@/lib/useCattleStore';
 import { QrCode, Edit, Printer, ChevronLeft, MapPin, Calendar, Heart } from 'lucide-react';
 import Link from 'next/link';
 
@@ -11,12 +11,11 @@ interface CattleProfileHeaderProps {
 }
 
 export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle, onEdit }) => {
-  const getHealthBadgeColor = (badge: string) => {
-    switch (badge) {
-      case 'Normal': return 'bg-green-100 text-green-700';
-      case 'Masa Henti Obat': return 'bg-red-100 text-red-700';
-      case 'ADG Rendah': return 'bg-orange-100 text-orange-700';
-      default: return 'bg-blue-100 text-blue-700';
+  const getHealthBadgeColor = (status: string) => {
+    switch (status) {
+      case 'AKTIF': return 'bg-green-100 text-green-700';
+      case 'ARCHIVED': return 'bg-gray-100 text-gray-700';
+      default: return 'bg-orange-100 text-orange-700';
     }
   };
 
@@ -52,8 +51,8 @@ export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle
           <div className="relative group shrink-0">
             <div className="w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden border-4 border-[#EAF6F0] shadow-xl">
               <img
-                src={cattle.image}
-                alt={cattle.name}
+                src={cattle.photoUrl || '/placeholder.jpg'}
+                alt={cattle.name || 'Sapi'}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
               />
             </div>
@@ -69,9 +68,9 @@ export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle
                 <span className="px-3 py-1 bg-[#EAF6F0] text-[#006B3F] text-xs font-bold rounded-full uppercase tracking-widest border border-[#006B3F]/10">
                   {cattle.breed}
                 </span>
-                <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-widest flex items-center gap-1.5 ${getHealthBadgeColor(cattle.healthBadge)}`}>
+                <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-widest flex items-center gap-1.5 ${getHealthBadgeColor(cattle.status)}`}>
                   <Heart className="w-3 h-3 fill-current" />
-                  {cattle.healthBadge}
+                  {cattle.status === 'AKTIF' ? 'Prima' : 'Pantauan'}
                 </span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-[#17211B] tracking-tight mb-2">
@@ -87,7 +86,7 @@ export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider">Lokasi Kandang</p>
-                  <p className="font-bold">{cattle.barn}</p>
+                  <p className="font-bold">{cattle.pen}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 text-[#17211B]">
@@ -96,7 +95,7 @@ export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider">Timbang Terakhir</p>
-                  <p className="font-bold">{cattle.lastWeighingDate}</p>
+                  <p className="font-bold">{cattle.updatedAt ? new Date(cattle.updatedAt).toLocaleDateString('id-ID') : '-'}</p>
                 </div>
               </div>
             </div>
