@@ -41,9 +41,17 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
         html5QrCodeRef.current = html5QrCode;
 
         const config = { 
-          fps: 10, 
-          qrbox: { width: 250, height: 250 },
-          disableFlip: true, // Recommended for Safari
+          fps: 15, 
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.floor(minEdge * 0.7);
+            return {
+              width: qrboxSize,
+              height: qrboxSize
+            };
+          },
+          disableFlip: true,
+          useBarCodeDetectorIfSupported: true, // Modern API support
         };
 
         // Try to start with the environment (back) camera
@@ -68,7 +76,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
           if (html5QrCodeRef.current) {
              await html5QrCodeRef.current.start(
               { facingMode: "user" },
-              { fps: 10, qrbox: { width: 250, height: 250 }, disableFlip: true },
+              { fps: 15, qrbox: { width: 250, height: 250 }, disableFlip: true, useBarCodeDetectorIfSupported: true },
               (decodedText) => { onScanSuccess(decodedText); stopScanning(); },
               () => {}
             );
