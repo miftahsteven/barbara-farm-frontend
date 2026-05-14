@@ -1,0 +1,165 @@
+import { create } from 'zustand';
+import { apiFetch } from './useAuthStore';
+import { toast } from 'sonner';
+
+// Aligning interface with Prisma schema
+export interface Cattle {
+  id: string;
+  eartagNo?: string;
+  name?: string;
+  breed: string;
+  gender: string;
+  originType: string;
+  originName?: string;
+  entryDate: string;
+  birthDate?: string;
+  estimatedAgeMonths?: number;
+  initialWeightKg: number;
+  purchasePrice: number;
+  photoUrl?: string;
+  pen: string;
+  status: string;
+  notes?: string;
+  qrUrl?: string;
+  damId?: string;
+  damAlias?: string;
+  isDam?: boolean;
+  dam?: Cattle;
+  latestWeightKg?: number;
+  archiveReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CattleState {
+  cattle: Cattle[];
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
+  filters: {
+    status: string;
+    breed: string;
+    pen: string;
+    gender: string;
+  };
+  viewMode: 'card' | 'table';
+  
+  // Actions
+  fetchCattle: () => Promise<void>;
+  setSearchQuery: (query: string) => void;
+  setFilter: (key: string, value: string) => void;
+  setViewMode: (mode: 'card' | 'table') => void;
+  addCattle: (newCattle: Partial<Cattle>) => Promise<Cattle>;
+  updateCattle: (id: string, updatedCattle: Partial<Cattle>) => Promise<Cattle>;
+  archiveCattle: (id: string, reason: string) => Promise<void>;
+  unarchiveCattle: (id: string) => Promise<void>;
+  deleteCattle: (id: string) => Promise<void>;
+}
+
+export const useCattleStore = create<CattleState>((set, get) => ({
+  cattle: [],
+  isLoading: false,
+  error: null,
+  searchQuery: '',
+  filters: {
+    status: 'ALL',
+    breed: 'ALL',
+    pen: 'ALL',
+    gender: 'ALL',
+  },
+  viewMode: 'card',
+
+  fetchCattle: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await apiFetch('/cattle');
+      if (!response.ok) throw new Error('Failed to fetch cattle data');
+      const data = await response.json();
+      set({ cattle: data, isLoading: false });
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
+    }
+  },
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  
+  setFilter: (key, value) => set((state) => ({
+    filters: { ...state.filters, [key]: value }
+  })),
+
+  setViewMode: (mode) => set({ viewMode: mode }),
+
+  addCattle: async (newCattle) => {
+    const response = await apiFetch('/cattle', {
+      method: 'POST',
+      body: JSON.stringify(newCattle)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || errorData.error?.message || 'Failed to create cattle');
+    }
+    const data = await response.json();
+    set((state) => ({ cattle: [data, ...state.cattle] }));
+    return data;
+  },
+
+  updateCattle: async (id, updatedCattle) => {
+    const response = await apiFetch(`/cattle/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedCattle)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update cattle');
+    }
+    const data = await response.json();
+    set((state) => ({
+      cattle: state.cattle.map((c) => c.id === id ? data : c)
+    }));
+    return data;
+  },
+
+  archiveCattle: async (id: string, reason: string) => {
+    try {
+      const response = await apiFetch(`/cattle/${encodeURIComponent(id)}/archive`, {
+        method: 'PUT',
+        body: JSON.stringify({ reason })
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        set((state) => ({
+          cattle: state.cattle.map((c) => (c.id === id ? updated : c))
+        }));
+        toast.success(`Sapi ${id} berhasil diarsipkan`);
+      }
+    } catch (error) {
+      console.error('Error archiving cattle:', error);
+      toast.error('Gagal mengarsipkan sapi');
+    }
+  },
+
+  unarchiveCattle: async (id: string) => {
+    try {
+      const response = await apiFetch(`/cattle/${encodeURIComponent(id)}/unarchive`, {
+        method: 'PUT'
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        set((state) => ({
+          cattle: state.cattle.map((c) => (c.id === id ? updated : c))
+        }));
+        toast.success(`Sapi ${id} telah diaktifkan kembali`);
+      }
+    } catch (error) {
+      console.error('Error unarchiving cattle:', error);
+      toast.error('Gagal mengaktifkan kembali sapi');
+    }
+  },
+
+  deleteCattle: async (id) => {
+    // Implement delete if available on backend, for now just remove from state (or archive)
+    set((state) => ({
+      cattle: state.cattle.filter((c) => c.id !== id)
+    }));
+  },
+}));
