@@ -26,7 +26,7 @@ export default function GrowthOverviewPage() {
     const cowLogs = logs.filter(l => l.cattleId === c.id).sort((a, b) => new Date(b.weighDate).getTime() - new Date(a.weighDate).getTime());
     const latestLog = cowLogs[0];
     
-    const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase()) || c.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase()) || c.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (!matchesSearch) return false;
     

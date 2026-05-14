@@ -52,7 +52,7 @@ function CreateMedicalLogContent() {
   // Sync cattleId if passed from URL
   React.useEffect(() => {
     if (cowId && cattle.length > 0 && !formData.cattleId) {
-      setFormData(prev => ({ ...prev, cattleId: cowId }));
+      setFormData((prev: any) => ({ ...prev, cattleId: cowId }));
     }
   }, [cowId, cattle, formData.cattleId]);
 

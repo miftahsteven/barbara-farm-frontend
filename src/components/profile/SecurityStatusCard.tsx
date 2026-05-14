@@ -54,7 +54,7 @@ export function SecurityStatusCard() {
               </div>
             </div>
             
-            <Modal open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
+            <Modal isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)}>
               <ModalTrigger asChild>
                 <Button variant="danger" size="sm">Logout dari Semua</Button>
               </ModalTrigger>

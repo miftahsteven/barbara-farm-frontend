@@ -2,16 +2,16 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
-  MoreVertical, 
-  Shield, 
-  Trash2, 
-  RefreshCw, 
-  Key, 
-  Copy, 
+import {
+  Users,
+  UserPlus,
+  Search,
+  MoreVertical,
+  Shield,
+  Trash2,
+  RefreshCw,
+  Key,
+  Copy,
   CheckCircle2,
   AlertCircle,
   Mail,
@@ -21,12 +21,12 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Badge } from "@/components/ui/Badge"
 import { Modal } from "@/components/ui/Modal"
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
 } from "@/components/ui/DropdownMenu"
 import { useAuthStore, apiFetch } from "@/lib/useAuthStore"
 import { toast } from "sonner"
@@ -45,7 +45,7 @@ export default function UserManagementPage() {
   const [users, setUsers] = React.useState<User[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [searchQuery, setSearchQuery] = React.useState("")
-  
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
@@ -90,14 +90,14 @@ export default function UserManagementPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault()
     const password = generateRandomPassword()
-    
+
     try {
       const response = await apiFetch('/users', {
         method: 'POST',
         body: JSON.stringify({ ...newUserData, password })
       })
       const data = await response.json()
-      
+
       if (response.ok) {
         toast.success("User berhasil ditambahkan")
         setUsers([data.user, ...users])
@@ -204,17 +204,17 @@ export default function UserManagementPage() {
     toast.success("Berhasil disalin ke clipboard")
   }
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter(u =>
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const [origin, setOrigin] = React.useState("")
-  
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       setOrigin(window.location.origin)
     }
-    
+
     // Check admin access
     if (!currentUser || currentUser.role !== 'admin') {
       toast.error("Akses ditolak. Anda bukan admin.")
@@ -237,8 +237,8 @@ export default function UserManagementPage() {
           </h1>
           <p className="text-text-secondary text-sm">Kelola akses akun dan keamanan sistem Barbara Farm.</p>
         </div>
-        <Button 
-          variant="primary" 
+        <Button
+          variant="primary"
           className="flex items-center gap-2"
           onClick={() => setIsAddModalOpen(true)}
         >
@@ -268,8 +268,8 @@ export default function UserManagementPage() {
         <div className="p-4 border-b border-border-neutral flex flex-col sm:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-            <Input 
-              placeholder="Cari user berdasarkan email..." 
+            <Input
+              placeholder="Cari user berdasarkan email..."
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -315,7 +315,7 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>
+                      <Badge variant={u.role === 'admin' ? 'primary' : 'neutral'}>
                         {u.role === 'admin' ? 'Administrator' : 'Staff'}
                       </Badge>
                     </td>
@@ -336,40 +336,40 @@ export default function UserManagementPage() {
                       {new Date(u.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="p-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { 
-                              setSelectedUser(u); 
-                              setEditUserData({ email: u.email, role: u.role });
-                              setIsEditModalOpen(true); 
-                            }}>
-                              <MoreVertical className="mr-2 h-4 w-4 text-text-secondary" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }}>
-                              <Key className="mr-2 h-4 w-4 text-text-secondary" />
-                              Ubah Password
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setSelectedUser(u); setIsReset2FAModalOpen(true); }}>
-                              <RefreshCw className="mr-2 h-4 w-4 text-text-secondary" />
-                              Reset 2FA
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-danger focus:bg-danger/10 focus:text-danger"
-                              onClick={() => { setSelectedUser(u); setIsDeleteModalOpen(true); }}
-                              disabled={u.id === currentUser?.id}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedUser(u);
+                            setEditUserData({ email: u.email, role: u.role });
+                            setIsEditModalOpen(true);
+                          }}>
+                            <MoreVertical className="mr-2 h-4 w-4 text-text-secondary" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setSelectedUser(u); setIsPasswordModalOpen(true); }}>
+                            <Key className="mr-2 h-4 w-4 text-text-secondary" />
+                            Ubah Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setSelectedUser(u); setIsReset2FAModalOpen(true); }}>
+                            <RefreshCw className="mr-2 h-4 w-4 text-text-secondary" />
+                            Reset 2FA
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-danger focus:bg-danger/10 focus:text-danger"
+                            onClick={() => { setSelectedUser(u); setIsDeleteModalOpen(true); }}
+                            disabled={u.id === currentUser?.id}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Hapus User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -382,20 +382,20 @@ export default function UserManagementPage() {
       {/* Add User Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah User Baru">
         <form onSubmit={handleAddUser} className="space-y-4 pt-2">
-          <Input 
-            label="Email Address" 
-            type="email" 
+          <Input
+            label="Email Address"
+            type="email"
             placeholder="email@example.com"
             value={newUserData.email}
-            onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+            onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
             required
           />
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-primary">Role</label>
-            <select 
+            <select
               className="w-full h-11 px-4 rounded-xl border border-border-neutral bg-white focus:outline-none focus:ring-2 focus:ring-primary-green transition-all"
               value={newUserData.role}
-              onChange={(e) => setNewUserData({...newUserData, role: e.target.value})}
+              onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
             >
               <option value="user">Staff / User</option>
               <option value="admin">Administrator</option>
@@ -416,19 +416,19 @@ export default function UserManagementPage() {
       {/* Edit User Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit User">
         <form onSubmit={handleUpdateUser} className="space-y-4 pt-2">
-          <Input 
-            label="Email Address" 
-            type="email" 
+          <Input
+            label="Email Address"
+            type="email"
             value={editUserData.email}
-            onChange={(e) => setEditUserData({...editUserData, email: e.target.value})}
+            onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
             required
           />
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-primary">Role</label>
-            <select 
+            <select
               className="w-full h-11 px-4 rounded-xl border border-border-neutral bg-white"
               value={editUserData.role}
-              onChange={(e) => setEditUserData({...editUserData, role: e.target.value})}
+              onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })}
             >
               <option value="user">Staff / User</option>
               <option value="admin">Administrator</option>
@@ -445,9 +445,9 @@ export default function UserManagementPage() {
       <Modal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} title="Ubah Password">
         <form onSubmit={handleChangePassword} className="space-y-4 pt-2">
           <p className="text-sm text-text-secondary">Ubah password untuk user: <span className="font-bold text-text-primary">{selectedUser?.email}</span></p>
-          <Input 
-            label="Password Baru" 
-            type="text" 
+          <Input
+            label="Password Baru"
+            type="text"
             placeholder="Masukkan password baru"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
@@ -506,15 +506,15 @@ export default function UserManagementPage() {
             <CheckCircle2 className="h-6 w-6 text-success" />
             <p className="text-sm font-medium text-success">Informasi login sudah siap dikirim.</p>
           </div>
-          
+
           <div className="space-y-3">
             <div className="p-4 bg-page-background rounded-2xl border border-border-neutral relative group">
               <pre className="text-sm text-text-primary whitespace-pre-wrap font-sans leading-relaxed">
                 {whatsappMessage}
               </pre>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => copyToClipboard(whatsappMessage)}
               >

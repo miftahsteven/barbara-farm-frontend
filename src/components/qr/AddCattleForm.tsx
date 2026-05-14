@@ -80,7 +80,7 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
         initialWeightKg: Number(formData.initialWeight),
         originType: 'Pembiakan Internal',
         entryDate: new Date().toISOString(),
-        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
+        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : undefined,
         purchasePrice: 0,
         photoUrl: image,
         pen: formData.barn,

@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 
 import { useSearchParams } from 'next/navigation';
 
-export default function QRScanPage() {
+function QRScanPageContent() {
   const searchParams = useSearchParams();
   const initialId = searchParams.get('id');
 
@@ -240,5 +240,13 @@ export default function QRScanPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function QRScanPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center"><RefreshCw className="animate-spin w-8 h-8 text-primary-green" /></div>}>
+      <QRScanPageContent />
+    </React.Suspense>
   );
 }

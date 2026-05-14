@@ -15,12 +15,13 @@ interface DamOption {
 }
 
 interface KtpSapiGeneratorProps {
-  onCodeGenerated?: (code: string, parts: any) => void;
+  onCodeGenerated?: (code: string, parts: any, damId?: string) => void;
   initialBreed?: string;
   initialGender?: 'JANTAN' | 'BETINA';
   initialBirthDate?: Date;
   initialAlias?: string;
   initialDamCode?: string;
+  excludeId?: string;
 }
 
 const KTP_PARTS_INFO = [
@@ -40,7 +41,7 @@ export const KtpSapiGenerator: React.FC<KtpSapiGeneratorProps> = ({
   initialBirthDate,
   initialAlias = '',
   initialDamCode = DEFAULT_DAM_CODE,
-  initialDamId,
+
   excludeId,
 }) => {
   const [form, setForm] = useState({

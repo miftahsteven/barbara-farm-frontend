@@ -18,7 +18,7 @@ export function QuickScanCard() {
   const [isOpen, setIsOpen] = React.useState(false)
 
   return (
-    <Modal open={isOpen} onOpenChange={setIsOpen}>
+    <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
       <ModalTrigger asChild>
         <div className="mt-8 flex items-center justify-between rounded-2xl bg-soft-green-surface p-4 cursor-pointer hover:bg-soft-green-surface/80 transition-colors border border-transparent hover:border-primary-green/20">
           <div>

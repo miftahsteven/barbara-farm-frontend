@@ -46,31 +46,32 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
 
   const { updateCattle } = useCattleStore();
 
-  // If not found in store, fetch directly from API
   useEffect(() => {
+    // Show cached data first for immediate rendering
     const fromStore = cattle.find(c => c.id === id);
     if (fromStore) {
       setCattleData(fromStore);
       setIsFetching(false);
-      return;
+    } else {
+      setIsFetching(true);
     }
 
-    if (!cattleData) {
-      setIsFetching(true);
-      apiFetch(`/cattle/${encodeURIComponent(id)}`)
-        .then(res => {
-          if (!res.ok) {
-            setNotFound(true);
-            return null;
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (data) setCattleData(data);
-        })
-        .catch(() => setNotFound(true))
-        .finally(() => setIsFetching(false));
-    }
+    // Always fetch fresh data to get relations (like 'dam', 'growthLogs')
+    apiFetch(`/cattle/${encodeURIComponent(id)}`)
+      .then(res => {
+        if (!res.ok) {
+          if (!fromStore) setNotFound(true);
+          return null;
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data) setCattleData(data);
+      })
+      .catch(() => {
+        if (!fromStore) setNotFound(true);
+      })
+      .finally(() => setIsFetching(false));
   }, [id, cattle]);
 
   const calculateDynamicAge = (birthDate?: string, estimatedMonthsAtEntry?: number, entryDate?: string) => {
@@ -231,6 +232,24 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                           <ExternalLink className="w-3 h-3 text-[#006B3F]" />
                         </Link>
                         <p className="text-[10px] text-[#68746D] italic">Klik untuk lihat profil indukan</p>
+                      </div>
+                    ) : cattleData.damId ? (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider">Indukan (Dam)</p>
+                        <Link 
+                          href={`/cattle/${encodeURIComponent(cattleData.damId)}`}
+                          className="flex items-center gap-2 group"
+                        >
+                          <span className="font-bold text-[#006B3F] group-hover:underline">{cattleData.damId}</span>
+                          <ExternalLink className="w-3 h-3 text-[#006B3F]" />
+                        </Link>
+                        <p className="text-[10px] text-[#68746D] italic">ID Indukan Terdaftar</p>
+                      </div>
+                    ) : cattleData.damAlias ? (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider">Indukan (Dam)</p>
+                        <p className="font-bold text-[#17211B]">{cattleData.damAlias}</p>
+                        <p className="text-[10px] text-[#68746D] italic">Kode Alias Indukan</p>
                       </div>
                     ) : (
                       <div className="space-y-1">

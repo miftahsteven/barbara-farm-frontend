@@ -27,7 +27,7 @@ export default function CowGrowthDetailPage({ params }: CowGrowthDetailPageProps
   const router = useRouter();
   const { cattle, fetchCattle } = useCattleStore();
   const { fetchLogsByCowId } = useGrowthStore();
-  const [cowLogs, setCowLogs] = React.useState<GrowthLog[]>([]);
+  const [cowLogs, setCowLogs] = React.useState<any[]>([]);
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   
   console.log('Growth Detail ID:', id);
