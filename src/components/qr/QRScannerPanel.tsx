@@ -18,51 +18,67 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
 }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(err => console.error("Failed to stop scanner", err));
       }
     };
   }, []);
 
-  const startScanning = () => {
+  const startScanning = async () => {
+    if (isScanning) return;
+    
     setIsInitializing(true);
     setIsScanning(true);
     
     // Small delay to ensure the div is rendered
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const scanner = new Html5QrcodeScanner(
-          "reader",
-          { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
-          },
-          /* verbose= */ false
-        );
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCodeRef.current = html5QrCode;
 
-        scanner.render(
+        const config = { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        };
+
+        // Try to start with the environment (back) camera
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
           (decodedText) => {
             // Success
             onScanSuccess(decodedText);
-            scanner.clear();
-            setIsScanning(false);
+            stopScanning();
           },
           (errorMessage) => {
             // Error (ignore common noisy errors)
-            // console.warn(errorMessage);
           }
         );
 
-        scannerRef.current = scanner;
         setIsInitializing(false);
       } catch (err) {
         console.error("Scanner init error", err);
+        // Fallback to any camera if environment camera fails
+        try {
+          if (html5QrCodeRef.current) {
+             await html5QrCodeRef.current.start(
+              { facingMode: "user" },
+              { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+              (decodedText) => { onScanSuccess(decodedText); stopScanning(); },
+              () => {}
+            );
+            setIsInitializing(false);
+            return;
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback scanner error", fallbackErr);
+        }
+        
         onScanError('camera');
         setIsScanning(false);
         setIsInitializing(false);
@@ -71,15 +87,18 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
     }, 100);
   };
 
-  const stopScanning = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().then(() => {
+  const stopScanning = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
         setIsScanning(false);
-        scannerRef.current = null;
-      }).catch(err => {
+        html5QrCodeRef.current = null;
+      } catch (err) {
         console.error("Stop error", err);
         setIsScanning(false);
-      });
+      }
     } else {
       setIsScanning(false);
     }
