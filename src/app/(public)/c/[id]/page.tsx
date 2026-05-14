@@ -13,7 +13,8 @@ import {
   QrCode, 
   LogIn,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Cattle } from '@/lib/useCattleStore';
