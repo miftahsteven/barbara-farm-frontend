@@ -31,32 +31,37 @@ export const FeedCompositionChart: React.FC<FeedCompositionChartProps> = ({ logs
     return null;
   };
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => setIsMounted(true), []);
+
   return (
     <div className="w-full h-[240px]">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={80}
-            paddingAngle={5}
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            verticalAlign="bottom" 
-            align="center"
-            iconType="circle"
-            formatter={(value) => <span className="text-[10px] font-bold text-[#68746D] uppercase ml-1">{value}</span>}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      {isMounted && (
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              verticalAlign="bottom" 
+              align="center"
+              iconType="circle"
+              formatter={(value) => <span className="text-[10px] font-bold text-[#68746D] uppercase ml-1">{value}</span>}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 };

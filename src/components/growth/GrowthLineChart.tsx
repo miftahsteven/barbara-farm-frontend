@@ -41,42 +41,47 @@ export const GrowthLineChart: React.FC<GrowthLineChartProps> = ({ logs }) => {
     return null;
   };
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => setIsMounted(true), []);
+
   return (
     <div className="w-full h-[320px] mt-4">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#006B3F" stopOpacity={0.1}/>
-              <stop offset="95%" stopColor="#006B3F" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DDE7E1" />
-          <XAxis 
-            dataKey="date" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fill: '#68746D', fontSize: 10, fontWeight: 700 }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fill: '#68746D', fontSize: 10, fontWeight: 700 }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Area 
-            type="monotone" 
-            dataKey="weight" 
-            stroke="#006B3F" 
-            strokeWidth={3}
-            fillOpacity={1} 
-            fill="url(#colorWeight)"
-            dot={{ r: 4, fill: '#006B3F', strokeWidth: 0 }}
-            activeDot={{ r: 6, fill: '#2FBF71', strokeWidth: 0 }}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      {isMounted && (
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#006B3F" stopOpacity={0.1}/>
+                <stop offset="95%" stopColor="#006B3F" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DDE7E1" />
+            <XAxis 
+              dataKey="date" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fill: '#68746D', fontSize: 10, fontWeight: 700 }}
+              dy={10}
+            />
+            <YAxis 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fill: '#68746D', fontSize: 10, fontWeight: 700 }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area 
+              type="monotone" 
+              dataKey="weight" 
+              stroke="#006B3F" 
+              strokeWidth={3}
+              fillOpacity={1} 
+              fill="url(#colorWeight)"
+              dot={{ r: 4, fill: '#006B3F', strokeWidth: 0 }}
+              activeDot={{ r: 6, fill: '#2FBF71', strokeWidth: 0 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 };

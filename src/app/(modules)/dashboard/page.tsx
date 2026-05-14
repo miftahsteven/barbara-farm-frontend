@@ -23,7 +23,10 @@ export default function DashboardPage() {
   const { logs, fetchLogs } = useGrowthStore();
   const { cattle, fetchCattle } = useCattleStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+
   React.useEffect(() => {
+    setIsMounted(true);
     fetchLogs();
     fetchCattle();
   }, [fetchLogs, fetchCattle]);
@@ -117,24 +120,26 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DDE5E1" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #DDE5E1', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="weight" 
-                    stroke="#006B3F" 
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#006B3F', strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: '#2FBF71', strokeWidth: 0 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {isMounted && (
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#DDE5E1" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dx={-10} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #DDE5E1', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weight" 
+                      stroke="#006B3F" 
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: '#006B3F', strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: '#2FBF71', strokeWidth: 0 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
