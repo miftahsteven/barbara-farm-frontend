@@ -19,6 +19,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const isTransitioning = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -29,8 +30,9 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
   }, []);
 
   const startScanning = async () => {
-    if (isScanning) return;
+    if (isScanning || isTransitioning.current) return;
     
+    isTransitioning.current = true;
     setIsInitializing(true);
     setIsScanning(true);
     
@@ -69,6 +71,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
         );
 
         setIsInitializing(false);
+        isTransitioning.current = false;
       } catch (err) {
         console.error("Scanner init error", err);
         // Fallback to any camera if environment camera fails
@@ -81,6 +84,7 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
               () => {}
             );
             setIsInitializing(false);
+            isTransitioning.current = false;
             return;
           }
         } catch (fallbackErr) {
@@ -90,22 +94,28 @@ export const QRScannerPanel: React.FC<QRScannerPanelProps> = ({
         onScanError('camera');
         setIsScanning(false);
         setIsInitializing(false);
+        isTransitioning.current = false;
         toast.error("Gagal mengaktifkan kamera. Pastikan izin diberikan.");
       }
     }, 100);
   };
 
   const stopScanning = async () => {
+    if (isTransitioning.current) return;
+    
     if (html5QrCodeRef.current) {
       try {
+        isTransitioning.current = true;
         if (html5QrCodeRef.current.isScanning) {
           await html5QrCodeRef.current.stop();
         }
         setIsScanning(false);
         html5QrCodeRef.current = null;
+        isTransitioning.current = false;
       } catch (err) {
         console.error("Stop error", err);
         setIsScanning(false);
+        isTransitioning.current = false;
       }
     } else {
       setIsScanning(false);
