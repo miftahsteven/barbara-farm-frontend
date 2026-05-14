@@ -75,7 +75,7 @@ function QRScanPageContent() {
 
   const generateNewQr = () => {
     const newId = `BF-NEW-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-    const baseUrl = 'http://192.168.18.65:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://barbara.mscode.id';
     setGeneratedQr(`${baseUrl}/c/${newId}`);
     setIsQrModalOpen(true);
   };
@@ -207,7 +207,7 @@ function QRScanPageContent() {
             <div className="space-y-3 p-4 bg-soft-green-surface/30 rounded-2xl border border-primary-green/20">
               <p className="text-xs font-bold text-primary-green uppercase">Sapi Terdaftar</p>
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.18.65:3000/c/BF-2026-0001`} 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://barbara.mscode.id'}/c/BF-2026-0001`} 
                 alt="Demo Valid" 
                 className="mx-auto rounded-lg shadow-sm"
               />
@@ -217,7 +217,7 @@ function QRScanPageContent() {
             <div className="space-y-3 p-4 bg-info/5 rounded-2xl border border-info/20">
               <p className="text-xs font-bold text-info uppercase">Sapi Baru</p>
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://192.168.18.65:3000/c/BF-NEW-DEMO`} 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://barbara.mscode.id'}/c/BF-NEW-DEMO`} 
                 alt="Demo New" 
                 className="mx-auto rounded-lg shadow-sm"
               />
