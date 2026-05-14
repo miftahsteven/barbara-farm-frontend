@@ -3,17 +3,18 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { 
-  LayoutDashboard, 
-  Beef, 
-  TrendingUp, 
-  Stethoscope, 
-  Wheat, 
-  DollarSign, 
-  QrCode, 
-  Bell, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Beef,
+  TrendingUp,
+  Stethoscope,
+  Wheat,
+  DollarSign,
+  QrCode,
+  Bell,
+  FileText,
   Settings,
   Users,
   X
@@ -74,11 +75,16 @@ export function Sidebar({ className, onClose }: { className?: string, onClose?: 
 
   return (
     <div className={cn("flex h-full w-64 flex-col border-r border-border-neutral bg-white", className)}>
-      <div className="flex h-16 items-center justify-between px-6 border-b border-border-neutral">
-        <div className="flex flex-col">
-          <span className="text-xl font-bold text-primary-green">Barbara Farm</span>
-          <span className="text-[10px] text-text-secondary uppercase tracking-wider">Smart Livestock Management</span>
-        </div>
+      <div className="flex h-20 items-center justify-between px-6 border-b border-border-neutral">
+        <Link href="/dashboard" className="flex items-center">
+          <Image
+            src="/images/logo3.png"
+            alt="SmartFarm Logo"
+            width={200}
+            height={80}
+            className="h-10 w-auto object-contain"
+          />
+        </Link>
         {onClose && (
           <button onClick={onClose} className="lg:hidden p-1 text-text-secondary hover:bg-page-background rounded-md">
             <X className="h-5 w-5" />
@@ -97,43 +103,43 @@ export function Sidebar({ className, onClose }: { className?: string, onClose?: 
                 {group.items
                   .filter(item => item.name !== "Manajemen User" || isAdmin)
                   .map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                  return item.disabled ? (
-                    <div
-                      key={item.name}
-                      className="group flex items-center rounded-xl px-3 py-2 text-sm font-medium text-text-secondary opacity-50 cursor-not-allowed"
-                    >
-                      <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                      {item.name}
-                    </div>
-                  ) : (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={onClose}
-                      className={cn(
-                        "group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-soft-green-surface text-primary-green"
-                          : "text-text-secondary hover:bg-page-background hover:text-text-primary"
-                      )}
-                    >
-                      <item.icon
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    return item.disabled ? (
+                      <div
+                        key={item.name}
+                        className="group flex items-center rounded-xl px-3 py-2 text-sm font-medium text-text-secondary opacity-50 cursor-not-allowed"
+                      >
+                        <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                        {item.name}
+                      </div>
+                    ) : (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={onClose}
                         className={cn(
-                          "mr-3 h-5 w-5 flex-shrink-0",
-                          isActive ? "text-primary-green" : "text-text-secondary group-hover:text-text-primary"
+                          "group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-soft-green-surface text-primary-green"
+                            : "text-text-secondary hover:bg-page-background hover:text-text-primary"
                         )}
-                      />
-                      {item.name}
-                    </Link>
-                  )
-                })}
+                      >
+                        <item.icon
+                          className={cn(
+                            "mr-3 h-5 w-5 flex-shrink-0",
+                            isActive ? "text-primary-green" : "text-text-secondary group-hover:text-text-primary"
+                          )}
+                        />
+                        {item.name}
+                      </Link>
+                    )
+                  })}
               </div>
             </div>
           ))}
         </nav>
       </div>
-      
+
       <div className="p-4 border-t border-border-neutral">
         <div className="rounded-xl bg-page-background p-3 text-center">
           <p className="text-xs text-text-secondary">© 2026 Barbara Farm</p>
