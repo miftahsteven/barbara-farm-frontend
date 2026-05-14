@@ -43,9 +43,9 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-export const API_URL = typeof window !== 'undefined' 
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' 
   ? `http://${window.location.hostname}:3001/api` 
-  : 'http://localhost:3001/api';
+  : 'http://localhost:3001/api');
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const token = useAuthStore.getState().token;
