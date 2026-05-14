@@ -82,7 +82,7 @@ export function Sidebar({ className, onClose }: { className?: string, onClose?: 
             alt="SmartFarm Logo"
             width={200}
             height={80}
-            className="h-10 w-auto object-contain"
+            className="h-12 md:h-32 w-auto object-contain transition-all"
           />
         </Link>
         {onClose && (
