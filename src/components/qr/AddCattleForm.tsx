@@ -32,6 +32,7 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
     initialWeight: '',
     barn: 'Kandang A',
     damCode: '',
+    damId: '',
     alias: '',
   });
 
@@ -91,8 +92,8 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
         pen: formData.barn,
         status: 'AKTIF',
         qrUrl: qrCodeId,
-        damId: generatedParts?.damCode !== 'EXT' ? generatedParts?.damCode : undefined,
-        damAlias: generatedParts?.damCode || 'EXT',
+        damId: formData.damId || undefined,
+        damAlias: formData.damCode || 'EXT',
         isDam: formData.gender === 'BETINA', // auto-mark females as potential dams
         notes: formData.alias ? `Nama panggilan: ${formData.alias}` : undefined,
       };
@@ -133,7 +134,7 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
             initialBreed={formData.breed}
             initialGender={formData.gender}
             initialBirthDate={new Date(formData.birthDate)}
-            onCodeGenerated={(code, parts) => {
+            onCodeGenerated={(code, parts, damId) => {
               setGeneratedKtp(code);
               setGeneratedParts(parts);
               
@@ -145,6 +146,7 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
                   birthDate: parts.birthDate ? new Date(parts.birthDate).toISOString().split('T')[0] : f.birthDate,
                   alias: parts.alias || f.alias,
                   damCode: parts.damCode || f.damCode,
+                  damId: damId || '',
                 }));
               }
             }}
