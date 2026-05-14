@@ -89,11 +89,13 @@ export const KtpSapiGenerator: React.FC<KtpSapiGeneratorProps> = ({
   useEffect(() => {
     if (form.alias.trim() === '') {
       setResult(null);
+      // Still notify parent about basic data changes even if code isn't fully ready
+      onCodeGenerated?.('', null, selectedDam?.id);
       return;
     }
     const generated = generateKtpSapi(form);
     setResult(generated);
-    onCodeGenerated?.(generated.fullCode, generated.parts, selectedDam?.id);
+    onCodeGenerated?.(generated.fullCode, { ...generated.parts, ...form }, selectedDam?.id);
   }, [form, selectedDam]);
 
   const handleSelectDam = (dam: DamOption | null) => {

@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { dummyCattle, Cattle } from '@/data/dummy-cattle';
+import { Cattle } from '@/lib/useCattleStore';
 import { useAuthStore, apiFetch } from '@/lib/useAuthStore';
 
 export default function CattlePublicProfile() {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Cattle } from '@/data/dummy-cattle';
+import { Cattle } from '@/lib/useCattleStore';
 import { ChevronRight, Weight, Activity, MapPin, Tag } from 'lucide-react';
 import Link from 'next/link';
 
@@ -13,10 +13,10 @@ interface ScanResultCardProps {
 export const ScanResultCard: React.FC<ScanResultCardProps> = ({ cattle, onScanAgain }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Sehat': return 'bg-green-100 text-green-700 border-green-200';
-      case 'Perlu Monitoring': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'Dalam Perawatan': return 'bg-red-100 text-red-700 border-red-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'AKTIF': return 'bg-green-100 text-green-700 border-green-200';
+      case 'TERJUAL': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'ARCHIVED': return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-orange-100 text-orange-700 border-orange-200';
     }
   };
 
@@ -33,7 +33,7 @@ export const ScanResultCard: React.FC<ScanResultCardProps> = ({ cattle, onScanAg
         <div className="flex gap-5 mb-6">
           <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-[#EAF6F0] shrink-0">
             <img 
-              src={cattle.image} 
+              src={cattle.photoUrl || '/placeholder.jpg'} 
               alt={cattle.name} 
               className="w-full h-full object-cover"
             />
@@ -58,28 +58,28 @@ export const ScanResultCard: React.FC<ScanResultCardProps> = ({ cattle, onScanAg
               <Weight className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Berat Terakhir</span>
             </div>
-            <p className="text-xl font-bold text-[#17211B]">{cattle.latestWeight} <span className="text-sm font-normal text-[#68746D]">Kg</span></p>
+            <p className="text-xl font-bold text-[#17211B]">{cattle.latestWeightKg || cattle.initialWeightKg} <span className="text-sm font-normal text-[#68746D]">Kg</span></p>
           </div>
           <div className="p-4 bg-[#F7FAF8] rounded-2xl border border-[#DDE7E1]">
             <div className="flex items-center gap-2 text-[#68746D] mb-1">
               <Activity className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase tracking-wider">ADG</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Eartag No</span>
             </div>
-            <p className="text-xl font-bold text-[#17211B]">{cattle.adg} <span className="text-sm font-normal text-[#68746D]">Kg/hari</span></p>
+            <p className="text-base font-bold text-[#17211B]">{cattle.eartagNo || '-'}</p>
           </div>
           <div className="p-4 bg-[#F7FAF8] rounded-2xl border border-[#DDE7E1]">
             <div className="flex items-center gap-2 text-[#68746D] mb-1">
               <MapPin className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">Lokasi</span>
             </div>
-            <p className="text-base font-bold text-[#17211B]">{cattle.barn}</p>
+            <p className="text-base font-bold text-[#17211B]">{cattle.pen}</p>
           </div>
           <div className="p-4 bg-[#F7FAF8] rounded-2xl border border-[#DDE7E1]">
             <div className="flex items-center gap-2 text-[#68746D] mb-1">
               <Tag className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Kesehatan</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Gender</span>
             </div>
-            <p className="text-base font-bold text-[#17211B]">{cattle.healthBadge}</p>
+            <p className="text-base font-bold text-[#17211B]">{cattle.gender}</p>
           </div>
         </div>
 

@@ -66,6 +66,11 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
       return;
     }
 
+    if (!generatedKtp) {
+      toast.error('Harap lengkapi data (Nama Panggilan/Alias) untuk menghasilkan Kode KTP Sapi');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Derive the ID from QR code URL or use KTP code
@@ -131,22 +136,26 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
             onCodeGenerated={(code, parts) => {
               setGeneratedKtp(code);
               setGeneratedParts(parts);
-              // Sync breed and gender from KTP generator to form
-              if (parts?.genderCode) {
+              
+              if (parts) {
                 setFormData(f => ({
                   ...f,
-                  gender: parts.genderCode === 'J' ? 'JANTAN' : 'BETINA',
+                  breed: parts.breed || f.breed,
+                  gender: parts.gender || f.gender,
+                  birthDate: parts.birthDate ? new Date(parts.birthDate).toISOString().split('T')[0] : f.birthDate,
+                  alias: parts.alias || f.alias,
+                  damCode: parts.damCode || f.damCode,
                 }));
               }
             }}
           />
         </div>
 
-        {/* === SECTION 2: Data Dasar === */}
+        {/* === SECTION 2: Data Tambahan === */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-            <h3 className="font-black text-[#17211B]">Data Dasar Sapi</h3>
+            <h3 className="font-black text-[#17211B]">Data Tambahan Sapi</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -155,50 +164,6 @@ export const AddCattleForm: React.FC<AddCattleFormProps> = ({ qrCodeId, onCancel
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Ras / Jenis Sapi</label>
-              <div className="relative">
-                <select
-                  value={formData.breed}
-                  onChange={(e) => setFormData({ ...formData, breed: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-[#DDE7E1] bg-[#F7FAF8] font-bold text-[#17211B] focus:outline-none focus:border-[#006B3F] appearance-none"
-                >
-                  {BREED_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#68746D] pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Jenis Kelamin</label>
-              <div className="flex gap-2">
-                {(['JANTAN', 'BETINA'] as const).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, gender: g })}
-                    className={`flex-1 py-3 rounded-xl border font-bold text-sm transition-all ${
-                      formData.gender === g
-                        ? 'bg-[#006B3F] text-white border-[#006B3F]'
-                        : 'bg-white text-[#68746D] border-[#DDE7E1] hover:bg-[#F7FAF8]'
-                    }`}
-                  >
-                    {g === 'JANTAN' ? '♂ Jantan' : '♀ Betina'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Tanggal Lahir</label>
-              <input
-                type="date"
-                value={formData.birthDate}
-                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-[#DDE7E1] bg-[#F7FAF8] font-bold text-[#17211B] focus:outline-none focus:border-[#006B3F]"
-              />
-            </div>
 
             <Input
               label="Berat Awal (Kg)"

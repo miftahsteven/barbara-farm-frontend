@@ -3,18 +3,23 @@
 import React, { useState } from 'react';
 import { QRScannerPanel } from '@/components/qr/QRScannerPanel';
 import { PublicCattleCard } from '@/components/qr/PublicCattleCard';
-import { dummyCattle, Cattle } from '@/data/dummy-cattle';
+import { useCattleStore, Cattle } from '@/lib/useCattleStore';
 import { ArrowLeft, Scan, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 export default function QuickScanPage() {
+  const { cattle, fetchCattle } = useCattleStore();
   const [scannedCattle, setScannedCattle] = useState<Cattle | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    fetchCattle();
+  }, [fetchCattle]);
+
   const handleScanSuccess = (id: string) => {
-    const cattle = dummyCattle.find(c => c.id === id);
-    if (cattle) {
-      setScannedCattle(cattle);
+    const found = cattle.find(c => c.id === id || c.qrUrl === id);
+    if (found) {
+      setScannedCattle(found);
       setError(null);
     } else {
       setError('Data sapi tidak ditemukan di sistem.');

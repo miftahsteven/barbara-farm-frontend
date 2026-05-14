@@ -7,7 +7,7 @@ import { ManualCattleInput } from '@/components/qr/ManualCattleInput';
 import { RecentScanList } from '@/components/qr/RecentScanList';
 import { ScannerTipsCard } from '@/components/qr/ScannerTipsCard';
 import { AddCattleForm } from '@/components/qr/AddCattleForm';
-import { dummyCattle, Cattle } from '@/data/dummy-cattle';
+import { useCattleStore, Cattle } from '@/lib/useCattleStore';
 import { AlertCircle, RefreshCw, Plus, QrCode, ArrowLeft, Info, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -27,6 +27,13 @@ function QRScanPageContent() {
   const [generatedQr, setGeneratedQr] = useState<string | null>(null);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
+  const { cattle, fetchCattle } = useCattleStore();
+
+  // Load cattle data on mount
+  React.useEffect(() => {
+    fetchCattle();
+  }, [fetchCattle]);
+
   // Re-sync if initialId changes
   React.useEffect(() => {
     if (initialId && !isRegistering) {
@@ -44,10 +51,10 @@ function QRScanPageContent() {
       cattleId = result.split(':').pop() || result;
     }
     
-    const cattle = dummyCattle.find(c => c.id === cattleId || c.qrCode === result);
+    const foundCattle = cattle.find(c => c.id === cattleId || c.qrUrl === result);
     
-    if (cattle) {
-      setScannedCattle(cattle);
+    if (foundCattle) {
+      setScannedCattle(foundCattle);
       setIsRegistering(false);
       setPendingQrId(null);
       setError(null);

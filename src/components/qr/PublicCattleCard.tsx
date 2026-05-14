@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Cattle } from '@/data/dummy-cattle';
+import { Cattle } from '@/lib/useCattleStore';
 import { Lock, Info, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,7 +26,7 @@ export const PublicCattleCard: React.FC<PublicCattleCardProps> = ({ cattle }) =>
       <div className="p-6">
         <div className="flex gap-4 mb-6">
           <img 
-            src={cattle.image} 
+            src={cattle.photoUrl || '/placeholder.jpg'} 
             alt={cattle.name} 
             className="w-20 h-20 rounded-2xl object-cover border-2 border-[#F7FAF8]"
           />
@@ -43,11 +43,11 @@ export const PublicCattleCard: React.FC<PublicCattleCardProps> = ({ cattle }) =>
           </div>
           <div className="p-3 bg-[#F7FAF8] rounded-xl">
             <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1">Lokasi</p>
-            <p className="font-bold text-[#17211B]">{cattle.barn}</p>
+            <p className="font-bold text-[#17211B]">{cattle.pen}</p>
           </div>
           <div className="p-3 bg-[#F7FAF8] rounded-xl">
             <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1">Terakhir Update</p>
-            <p className="font-bold text-[#17211B]">{cattle.lastWeighingDate}</p>
+            <p className="font-bold text-[#17211B]">{cattle.updatedAt ? new Date(cattle.updatedAt).toLocaleDateString('id-ID') : '-'}</p>
           </div>
           <div className="p-3 bg-[#F7FAF8] rounded-xl">
             <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1">Pemilik</p>
