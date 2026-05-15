@@ -123,13 +123,15 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
-                    <Link 
-                      href={`/cattle/${encodeURIComponent(item.id)}?edit=true`}
-                      className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-all"
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Link>
+                    {item.status !== 'TERJUAL' && (
+                      <Link 
+                        href={`/cattle/${encodeURIComponent(item.id)}?edit=true`}
+                        className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-all"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Link>
+                    )}
                     <button 
                       onClick={() => onShowQr(item)}
                       className="p-2 hover:bg-[#F7FAF8] text-[#17211B] rounded-lg transition-all"
