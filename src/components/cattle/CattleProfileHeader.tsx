@@ -2,15 +2,16 @@
 
 import React from 'react';
 import { Cattle } from '@/lib/useCattleStore';
-import { QrCode, Edit, Printer, ChevronLeft, MapPin, Calendar, Heart } from 'lucide-react';
+import { QrCode, Edit, Printer, ChevronLeft, MapPin, Calendar, Heart, Navigation } from 'lucide-react';
 import Link from 'next/link';
 
 interface CattleProfileHeaderProps {
   cattle: Cattle;
   onEdit?: () => void;
+  onLocate?: () => void;
 }
 
-export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle, onEdit }) => {
+export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle, onEdit, onLocate }) => {
   const getHealthBadgeColor = (status: string) => {
     switch (status) {
       case 'AKTIF': return 'bg-green-100 text-green-700';
@@ -31,6 +32,13 @@ export const CattleProfileHeader: React.FC<CattleProfileHeaderProps> = ({ cattle
           <span className="font-semibold">Kembali ke Daftar Sapi  </span>
         </Link>
         <div className="flex items-center gap-3">
+          <button
+            onClick={onLocate}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#EAF6F0] hover:bg-[#D1F0E0] text-[#006B3F] rounded-xl font-bold transition-all border border-[#006B3F]/20"
+          >
+            <Navigation className="w-4 h-4" />
+            Lokasi GPS
+          </button>
           <button className="p-2.5 bg-[#F7FAF8] hover:bg-[#EAF6F0] rounded-xl border border-[#DDE7E1] text-[#006B3F] transition-all">
             <Printer className="w-5 h-5" />
           </button>

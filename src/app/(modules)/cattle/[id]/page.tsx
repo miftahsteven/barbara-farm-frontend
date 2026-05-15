@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/useAuthStore';
 import { CattleProfileHeader } from '@/components/cattle/CattleProfileHeader';
 import { CattleQrModal } from '@/components/cattle/CattleQrModal';
 import { CattleFormWizard } from '@/components/cattle/CattleFormWizard';
+import { CattleTrackerModal } from '@/components/cattle/CattleTrackerModal';
 import { 
   TrendingUp, 
   Stethoscope, 
@@ -19,7 +20,8 @@ import {
   Loader2,
   X,
   ExternalLink,
-  ChevronLeft
+  ChevronLeft,
+  Navigation
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
@@ -43,6 +45,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
   const [activeTab, setActiveTab] = useState('profil');
   const [showQr, setShowQr] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showTrackerModal, setShowTrackerModal] = useState(false);
 
   const { updateCattle } = useCattleStore();
 
@@ -172,6 +175,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
 
   const tabs = [
     { id: 'profil', label: 'Profil', icon: <Info className="w-4 h-4" /> },
+    { id: 'lokasi', label: 'Lokasi GPS', icon: <Navigation className="w-4 h-4" /> },
     { id: 'qr', label: 'QR Code', icon: <History className="w-4 h-4" /> },
     { id: 'riwayat', label: 'Riwayat Terkait', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'audit', label: 'Audit Log', icon: <UserCheck className="w-4 h-4" /> },
@@ -182,6 +186,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
       <CattleProfileHeader 
         cattle={headerCattle as any} 
         onEdit={() => setShowEditModal(true)}
+        onLocate={() => setShowTrackerModal(true)}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
@@ -300,6 +305,40 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
               </div>
             )}
 
+            {activeTab === 'lokasi' && (
+              <div className="py-16 flex flex-col items-center text-center">
+                <div className="w-24 h-24 bg-[#EAF6F0] rounded-full flex items-center justify-center mb-6 text-5xl">🐄</div>
+                <h3 className="text-2xl font-black text-[#17211B] mb-3">Pelacak GPS Ternak</h3>
+                <p className="text-[#68746D] max-w-sm mb-8 leading-relaxed">
+                  Pantau pergerakan <strong>{cattleData.id}</strong> secara live atau lihat posisi terkini via kalung GPS yang terpasang.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => setShowTrackerModal(true)}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black transition-all shadow-lg shadow-red-500/20"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                    Live Tracking
+                  </button>
+                  <button
+                    onClick={() => setShowTrackerModal(true)}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-[#006B3F] hover:bg-[#004D2E] text-white rounded-2xl font-black transition-all shadow-lg shadow-[#006B3F]/20"
+                  >
+                    <Navigation className="w-5 h-5" />
+                    Posisi Sekarang
+                  </button>
+                </div>
+                <div className="mt-10 grid grid-cols-3 gap-4 w-full max-w-md">
+                  {[{label:'Status Kalung', value:'Aktif ✓', color:'text-green-600'},{label:'Signal GPS', value:'Baik', color:'text-green-600'},{label:'Baterai', value:'78%', color:'text-[#006B3F]'}].map(s => (
+                    <div key={s.label} className="bg-[#F7FAF8] rounded-2xl p-4 border border-[#DDE7E1]">
+                      <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider mb-1">{s.label}</p>
+                      <p className={`font-black text-sm ${s.color}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'qr' && (
               <div className="flex flex-col items-center py-12">
                 <div className="p-8 bg-white rounded-[2.5rem] border-2 border-[#DDE7E1] mb-8 shadow-xl">
@@ -399,6 +438,10 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
           </div>
         </div>
       )}
+      <CattleTrackerModal 
+        cattle={showTrackerModal ? (cattle.find(c => c.id === cattleData.id) || cattleData) : null}
+        onClose={() => setShowTrackerModal(false)}
+      />
     </div>
   );
 }

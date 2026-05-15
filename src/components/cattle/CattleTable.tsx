@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Cattle } from '@/lib/useCattleStore';
-import { Eye, Edit, QrCode, Archive, RotateCcw, MoreVertical, CheckCircle2 } from 'lucide-react';
+import { Eye, Edit, QrCode, Archive, RotateCcw, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { CattleTrackerModal } from './CattleTrackerModal';
 
 interface CattleTableProps {
   cattle: Cattle[];
@@ -13,6 +14,7 @@ interface CattleTableProps {
 }
 
 export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onArchive, onUnarchive }) => {
+  const [trackerCattle, setTrackerCattle] = useState<Cattle | null>(null);
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'AKTIF': return 'bg-green-100 text-green-700 border-green-200';
@@ -42,6 +44,8 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
   };
 
   return (
+    <>
+    <CattleTrackerModal cattle={trackerCattle} onClose={() => setTrackerCattle(null)} />
     <div className="bg-white rounded-3xl border border-[#DDE7E1] shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -50,7 +54,7 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Foto</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">ID Sapi</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Informasi</th>
-              <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Kandang</th>
+              <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Ras</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Berat</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Status</th>
               {cattle.some(c => c.status === 'ARSIP') && (
@@ -70,17 +74,24 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                   />
                 </td>
                 <td className="px-6 py-4">
-                  <p className="font-black text-[#17211B]">{item.id}</p>
-                  <p className="text-xs text-[#68746D]">{item.eartagNo || '-'}</p>
+                  <div className="flex flex-col">
+                    <p className="font-black text-[#17211B] leading-tight mb-1 text-[13px] tracking-tight whitespace-nowrap">{item.id}</p>
+                    <p className="text-[10px] font-bold text-[#68746D] uppercase tracking-wider bg-[#F7FAF8] w-fit px-1.5 py-0.5 rounded border border-[#DDE7E1] opacity-80 whitespace-nowrap">TAG: {item.eartagNo || '-'}</p>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="font-bold text-[#17211B]">{item.name}</p>
-                  <p className="text-xs text-[#68746D]">{getBreedName(item.breed)} • {item.gender}</p>
+                  <div className="flex flex-col">
+                    <p className="font-bold text-[#17211B] mb-0.5 text-sm">{item.name || 'Tanpa Nama'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1 h-1 rounded-full bg-[#006B3F] opacity-30" />
+                      <p className="text-[11px] text-[#68746D] font-medium tracking-wide uppercase">{item.gender}</p>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 font-bold text-[#17211B]">{item.pen}</td>
+                <td className="px-6 py-4 font-bold text-[#17211B] text-xs uppercase">{getBreedName(item.breed)}</td>
                 <td className="px-6 py-4">
-                  <p className="font-bold text-[#17211B]">{item.latestWeightKg || item.initialWeightKg} Kg</p>
-                  <p className="text-[10px] text-[#68746D]">Awal: {item.initialWeightKg} Kg</p>
+                  <p className="font-bold text-[#17211B] text-[13px] whitespace-nowrap">{item.latestWeightKg || item.initialWeightKg} Kg</p>
+                  <p className="text-[10px] text-[#68746D] whitespace-nowrap">Awal: {item.initialWeightKg} Kg</p>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getStatusStyle(item.status)}`}>
@@ -94,6 +105,14 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                 )}
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setTrackerCattle(item)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#006B3F]/10 hover:bg-[#006B3F]/20 text-[#006B3F] rounded-lg transition-all text-xs font-bold border border-[#006B3F]/20"
+                      title="Lihat Posisi GPS"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      Lihat Posisi
+                    </button>
                     <Link 
                       href={`/cattle/${encodeURIComponent(item.id)}`}
                       className="p-2 hover:bg-[#EAF6F0] text-[#006B3F] rounded-lg transition-all"
@@ -140,5 +159,6 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
         </table>
       </div>
     </div>
+    </>
   );
 };
