@@ -115,7 +115,7 @@ export const useCattleStore = create<CattleState>((set, get) => ({
   },
 
   updateCattle: async (id, updatedCattle) => {
-    const response = await apiFetch(`/cattle/${id}`, {
+    const response = await apiFetch(`/cattle/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updatedCattle)
     });

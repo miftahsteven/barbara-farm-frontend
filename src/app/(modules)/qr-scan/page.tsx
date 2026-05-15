@@ -43,23 +43,42 @@ function QRScanPageContent() {
   }, [initialId]);
 
   const handleScanSuccess = (result: string) => {
-    // Check if result is a full URL or just an ID
-    let cattleId = result;
-    if (result.includes('/cattle/')) {
-      cattleId = result.split('/cattle/').pop() || result;
-    } else if (result.includes('/c/')) {
-      cattleId = result.split('/c/').pop() || result;
-    } else if (result.includes(':')) {
-      cattleId = result.split(':').pop() || result;
+    // 1. Initial cleanup of the scan result
+    let rawResult = result.trim();
+    let cattleId = rawResult;
+
+    // 2. Extract ID from various URL formats or protocols
+    if (rawResult.includes('/cattle/')) {
+      cattleId = rawResult.split('/cattle/').pop() || rawResult;
+    } else if (rawResult.includes('/c/')) {
+      cattleId = rawResult.split('/c/').pop() || rawResult;
+    } else if (rawResult.includes(':')) {
+      // Handles SMARTFARM:CATTLE:ID or other colon-separated formats
+      const parts = rawResult.split(':');
+      cattleId = parts[parts.length - 1] || rawResult;
     }
     
-    // Clean up any trailing slashes or query params
+    // 3. Strip query parameters and trailing slashes
     cattleId = cattleId.split('?')[0].split('#')[0].replace(/\/$/, '');
     
-    // Decode URL-encoded characters (like %20 to space)
-    cattleId = decodeURIComponent(cattleId);
+    // 4. Robust decoding (handles multiple levels of encoding if necessary)
+    try {
+      cattleId = decodeURIComponent(cattleId);
+      // Try one more time in case of double encoding (common in some QR generators)
+      if (cattleId.includes('%')) {
+        cattleId = decodeURIComponent(cattleId);
+      }
+    } catch (e) {
+      console.warn("Failed to decode cattleId", cattleId);
+    }
+
+    cattleId = cattleId.trim();
     
-    const foundCattle = cattle.find(c => c.id === cattleId || c.qrUrl === result);
+    // 5. Look up in local store with normalized comparison
+    const foundCattle = cattle.find(c => {
+      const normalizedStoreId = c.id.trim();
+      return normalizedStoreId === cattleId || c.qrUrl === rawResult || c.qrUrl === cattleId;
+    });
     
     if (foundCattle) {
       setScannedCattle(foundCattle);
@@ -74,7 +93,8 @@ function QRScanPageContent() {
       toast.success("Sapi ditemukan!");
     } else {
       // ID not found - trigger registration flow
-      setPendingQrId(result.startsWith('SMARTFARM:') ? result : `SMARTFARM:CATTLE:${result}`);
+      // Use the cleaned cattleId for the registration ID
+      setPendingQrId(`SMARTFARM:CATTLE:${cattleId}`);
       setIsRegistering(true);
       setScannedCattle(null);
       setError(null);
