@@ -35,7 +35,13 @@ export default function CattleListPage() {
       (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.eartagNo && c.eartagNo.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesStatus = filters.status === 'ALL' ? c.status !== 'ARSIP' && c.status !== 'TERJUAL' : c.status === filters.status;
+    // Normalize status for filtering (legacy support)
+    const effectiveStatus = (c.status === 'ARSIP' && c.archiveReason === 'Terjual') ? 'TERJUAL' : c.status;
+    
+    const matchesStatus = filters.status === 'ALL' 
+      ? effectiveStatus !== 'ARSIP' && effectiveStatus !== 'TERJUAL' 
+      : effectiveStatus === filters.status;
+      
     const matchesBreed = filters.breed === 'ALL' ? true : c.breed === filters.breed;
     const matchesPen = filters.pen === 'ALL' ? true : c.pen === filters.pen;
     const matchesGender = filters.gender === 'ALL' ? true : c.gender === filters.gender;

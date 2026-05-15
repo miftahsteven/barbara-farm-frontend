@@ -8,9 +8,18 @@ export const CattleSummaryCards: React.FC = () => {
   const cattle = useCattleStore((state) => state.cattle);
 
   const stats = {
-    total: cattle.filter(c => c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
-    jantan: cattle.filter(c => c.gender === 'JANTAN' && c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
-    betina: cattle.filter(c => c.gender === 'BETINA' && c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
+    total: cattle.filter(c => {
+      const isSold = c.status === 'TERJUAL' || (c.status === 'ARSIP' && c.archiveReason === 'Terjual');
+      return c.status !== 'ARSIP' && !isSold;
+    }).length,
+    jantan: cattle.filter(c => {
+      const isSold = c.status === 'TERJUAL' || (c.status === 'ARSIP' && c.archiveReason === 'Terjual');
+      return c.gender === 'JANTAN' && c.status !== 'ARSIP' && !isSold;
+    }).length,
+    betina: cattle.filter(c => {
+      const isSold = c.status === 'TERJUAL' || (c.status === 'ARSIP' && c.archiveReason === 'Terjual');
+      return c.gender === 'BETINA' && c.status !== 'ARSIP' && !isSold;
+    }).length,
     siapJual: cattle.filter(c => c.status === 'SIAP_JUAL').length,
     pemantauan: cattle.filter(c => c.status === 'PEMANTAUAN').length,
   };
