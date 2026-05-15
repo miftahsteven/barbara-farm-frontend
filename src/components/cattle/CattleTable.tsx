@@ -21,6 +21,7 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
       case 'SIAP_JUAL': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'PEMANTAUAN': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'ARSIP': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'TERJUAL': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -57,7 +58,7 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Ras</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Berat</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Status</th>
-              {cattle.some(c => c.status === 'ARSIP') && (
+              {(cattle.some(c => c.status === 'ARSIP') || cattle.some(c => c.status === 'TERJUAL')) && (
                 <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Alasan</th>
               )}
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest text-right">Aksi</th>
@@ -98,21 +99,23 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                     {item.status.replace('_', ' ')}
                   </span>
                 </td>
-                {cattle.some(c => c.status === 'ARSIP') && (
+                {(cattle.some(c => c.status === 'ARSIP') || cattle.some(c => c.status === 'TERJUAL')) && (
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-[#17211B]">{item.archiveReason || '-'}</p>
                   </td>
                 )}
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => setTrackerCattle(item)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#006B3F]/10 hover:bg-[#006B3F]/20 text-[#006B3F] rounded-lg transition-all text-xs font-bold border border-[#006B3F]/20"
-                      title="Lihat Posisi GPS"
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
-                      Lihat Posisi
-                    </button>
+                    {item.status !== 'ARSIP' && item.status !== 'TERJUAL' && (
+                      <button
+                        onClick={() => setTrackerCattle(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#006B3F]/10 hover:bg-[#006B3F]/20 text-[#006B3F] rounded-lg transition-all text-xs font-bold border border-[#006B3F]/20"
+                        title="Lihat Posisi GPS"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        Lihat Posisi
+                      </button>
+                    )}
                     <Link 
                       href={`/cattle/${encodeURIComponent(item.id)}`}
                       className="p-2 hover:bg-[#EAF6F0] text-[#006B3F] rounded-lg transition-all"
@@ -134,7 +137,7 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                     >
                       <QrCode className="w-4 h-4" />
                     </button>
-                    {item.status === 'ARSIP' ? (
+                    {(item.status === 'ARSIP' || item.status === 'TERJUAL') ? (
                       <button 
                         onClick={() => onUnarchive(item)}
                         className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-all"

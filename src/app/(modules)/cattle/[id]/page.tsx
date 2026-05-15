@@ -156,7 +156,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
     image: cattleData.photoUrl,
     barn: cattleData.pen,
     lastWeighingDate: cattleData.updatedAt ? new Date(cattleData.updatedAt).toLocaleDateString('id-ID') : '-',
-    healthBadge: cattleData.status === 'AKTIF' ? 'Normal' : (cattleData.status === 'PEMANTAUAN' ? 'Perlu Monitoring' : 'Normal')
+    healthBadge: cattleData.status === 'AKTIF' ? 'Normal' : (cattleData.status === 'PEMANTAUAN' ? 'Perlu Monitoring' : (cattleData.status === 'TERJUAL' ? 'Terjual' : 'Arsip'))
   };
 
   const formatDate = (dateString: string) => {
@@ -175,7 +175,9 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
 
   const tabs = [
     { id: 'profil', label: 'Profil', icon: <Info className="w-4 h-4" /> },
-    { id: 'lokasi', label: 'Lokasi GPS', icon: <Navigation className="w-4 h-4" /> },
+    ...(cattleData.status !== 'ARSIP' && cattleData.status !== 'TERJUAL' 
+      ? [{ id: 'lokasi', label: 'Lokasi GPS', icon: <Navigation className="w-4 h-4" /> }] 
+      : []),
     { id: 'qr', label: 'QR Code', icon: <History className="w-4 h-4" /> },
     { id: 'riwayat', label: 'Riwayat Terkait', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'audit', label: 'Audit Log', icon: <UserCheck className="w-4 h-4" /> },

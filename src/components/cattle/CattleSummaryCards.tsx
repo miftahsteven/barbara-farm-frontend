@@ -8,11 +8,10 @@ export const CattleSummaryCards: React.FC = () => {
   const cattle = useCattleStore((state) => state.cattle);
 
   const stats = {
-    total: cattle.filter(c => c.status !== 'ARSIP').length,
-    jantan: cattle.filter(c => c.gender === 'JANTAN' && c.status !== 'ARSIP').length,
-    betina: cattle.filter(c => c.gender === 'BETINA' && c.status !== 'ARSIP').length,
-    siapJual: cattle.filter(c => c.status === 'SIAP__JUAL').length, // Corrected from seed
-    siapJualReal: cattle.filter(c => c.status === 'SIAP_JUAL').length,
+    total: cattle.filter(c => c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
+    jantan: cattle.filter(c => c.gender === 'JANTAN' && c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
+    betina: cattle.filter(c => c.gender === 'BETINA' && c.status !== 'ARSIP' && c.status !== 'TERJUAL').length,
+    siapJual: cattle.filter(c => c.status === 'SIAP_JUAL').length,
     pemantauan: cattle.filter(c => c.status === 'PEMANTAUAN').length,
   };
 
@@ -20,7 +19,7 @@ export const CattleSummaryCards: React.FC = () => {
     { label: 'Total Sapi Aktif', value: stats.total, icon: <Users className="w-5 h-5" />, color: 'text-[#006B3F]', bg: 'bg-[#EAF6F0]' },
     { label: 'Jantan', value: stats.jantan, icon: <Mars className="w-5 h-5" />, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Betina', value: stats.betina, icon: <Venus className="w-5 h-5" />, color: 'text-pink-600', bg: 'bg-pink-50' },
-    { label: 'Siap Jual', value: stats.siapJualReal, icon: <ShoppingBag className="w-5 h-5" />, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Siap Jual', value: stats.siapJual, icon: <ShoppingBag className="w-5 h-5" />, color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Pemantauan', value: stats.pemantauan, icon: <Activity className="w-5 h-5" />, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
