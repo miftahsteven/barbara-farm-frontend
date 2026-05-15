@@ -62,7 +62,7 @@ const menuGroups: MenuGroup[] = [
     title: "SISTEM",
     items: [
       { name: "Manajemen User", href: "/admin/users", icon: Users },
-      { name: "Pengaturan", href: "/settings", icon: Settings, disabled: true },
+      { name: "Pengaturan", href: "/settings", icon: Settings },
     ]
   }
 ]
