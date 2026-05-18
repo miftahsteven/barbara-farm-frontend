@@ -321,7 +321,7 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                 >
                   <option value="">-- Milik Barbara Farm Sendiri --</option>
                   {investors.map(inv => (
-                    <option key={inv.id} value={inv.id}>{inv.name} (Bagi Hasil: {inv.profitSharePercent}%)</option>
+                    <option key={inv.id} value={inv.id}>{inv.name}</option>
                   ))}
                 </select>
                 <p className="text-[10px] text-[#68746D]">Hubungkan sapi ini dengan investor jika ini merupakan sapi titipan.</p>
@@ -355,7 +355,8 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                           onChange={e => setInsuranceData(prev => ({ ...prev, coverageType: e.target.value }))}
                           className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
                         >
-                          <option value="KEMATIAN">Asuransi Kematian & Kehilangan (Modal Kembali)</option>
+                          <option value="KEMATIAN">Asuransi Kematian (Modal Kembali)</option>
+                          <option value="KEHILANGAN">Asuransi Kehilangan (Lepas Liar)</option>
                           <option value="KESEHATAN_KRITIS">Kesehatan Kritis & Medis Ekstrem</option>
                           <option value="GAGAL_TUMBUH">Proteksi Gagal Tumbuh / Stunting (FCR)</option>
                           <option value="LAINNYA">Perjanjian Custom Lainnya</option>
@@ -569,7 +570,7 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                   <div>
                     <span className="opacity-60 block text-[9px] uppercase tracking-wider">Tipe Proteksi</span>
                     <span className="font-bold">
-                      {insuranceData.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan (Modal Kembali)' : (insuranceData.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis & Medis' : (insuranceData.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom'))}
+                      {insuranceData.coverageType === 'KEMATIAN' ? 'Asuransi Kematian (Modal Kembali)' : (insuranceData.coverageType === 'KEHILANGAN' ? 'Asuransi Kehilangan (Lepas Liar)' : (insuranceData.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis & Medis' : (insuranceData.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom')))}
                     </span>
                   </div>
                   <div>

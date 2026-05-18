@@ -17,16 +17,16 @@ export default function CattleListPage() {
   const [cattleToArchive, setCattleToArchive] = useState<Cattle | null>(null);
   const [archiveReason, setArchiveReason] = useState('Terjual');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = viewMode === 'card' ? 12 : 10;
 
   useEffect(() => {
     fetchCattle();
   }, [fetchCattle]);
 
-  // Reset to page 1 when search or filters change
+  // Reset to page 1 when search, filters, or viewMode change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, viewMode]);
 
   // Filter Logic
   const filteredCattle = cattle.filter((c) => {
@@ -250,10 +250,37 @@ export default function CattleListPage() {
                   className="w-full px-5 py-3.5 bg-[#F7FAF8] border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-red-500"
                 >
                   <option value="Terjual">Terjual</option>
-                  <option value="Mati">Mati</option>
+                  <option value="Mati">Mati (Kematian)</option>
+                  <option value="Hilang">Hilang (Lepas Liar / Hilang)</option>
                   <option value="Dipindahkan">Dipindahkan</option>
                   <option value="Lainnya">Lainnya</option>
                 </select>
+
+                {(archiveReason === 'Mati' || archiveReason === 'Hilang') && (
+                  <div className="w-full p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-left text-xs text-[#006B3F] space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2 font-black">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Status Proteksi Investasi</span>
+                    </div>
+                    {cattleToArchive.insurance ? (
+                      <div>
+                        <p className="font-bold text-[#17211B] mb-1">
+                          Sapi dilindungi oleh: <span className="text-[#006B3F]">{cattleToArchive.insurance.coverageType === 'KEMATIAN' ? 'Asuransi Kematian' : (cattleToArchive.insurance.coverageType === 'KEHILANGAN' ? 'Asuransi Kehilangan' : (cattleToArchive.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleToArchive.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh' : 'Custom')))}</span>
+                        </p>
+                        <p className="leading-relaxed">
+                          Sesuai perjanjian investasi, {archiveReason === 'Hilang' ? 'kehilangan di alam liar disamakan dengan kematian' : 'kematian sapi'} dilindungi dengan ganti rugi sebesar <strong className="font-black text-[#17211B]">{cattleToArchive.insurance.coveragePercent}%</strong> dari modal awal.
+                        </p>
+                        <p className="mt-2 text-xs font-black text-[#17211B] bg-white/80 p-2 rounded-lg border border-emerald-200 text-center">
+                          Dana Ganti Rugi: Rp {(cattleToArchive.insurance.sumAssured * (cattleToArchive.insurance.coveragePercent / 100)).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-red-600 bg-red-50 p-3 rounded-xl border border-red-100 font-bold text-center leading-relaxed">
+                        Peringatan: Sapi ini TIDAK memiliki proteksi asuransi. Kehilangan/Kematian sepenuhnya menjadi risiko tanpa pengembalian modal.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 w-full">

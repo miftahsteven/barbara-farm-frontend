@@ -3,6 +3,8 @@
 import * as React from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Header } from "@/components/layout/Header"
+import { useAuthStore } from "@/lib/useAuthStore"
+import { useRouter } from "next/navigation"
 
 export default function DashboardLayout({
   children,
@@ -10,6 +12,38 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+  const [isHydrated, setIsHydrated] = React.useState(false)
+  const { token, user } = useAuthStore()
+  const router = useRouter()
+
+  React.useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setIsHydrated(true)
+      return
+    }
+
+    const unsub = useAuthStore.persist.onFinishHydration(() => {
+      setIsHydrated(true)
+    })
+
+    return () => unsub()
+  }, [])
+
+  React.useEffect(() => {
+    if (!isHydrated) return
+
+    if (!token || !user) {
+      router.replace("/login")
+    }
+  }, [isHydrated, token, user, router])
+
+  if (!isHydrated || !token || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-page-background">
+        <div className="w-10 h-10 border-4 border-[#006B3F] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-page-background">

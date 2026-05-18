@@ -291,7 +291,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-[#006B3F] hover:bg-emerald-100 hover:text-emerald-800 rounded-xl text-xs font-bold transition-all border border-[#006B3F]/20 mt-1 cursor-pointer w-fit"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-[#006B3F]" />
-                          <span>{cattleData.insurance.coverageType === 'KEMATIAN' ? 'Asuransi Kematian' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom'))}</span>
+                          <span>{cattleData.insurance.coverageType === 'KEMATIAN' ? 'Asuransi Kematian' : (cattleData.insurance.coverageType === 'KEHILANGAN' ? 'Asuransi Kehilangan' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom')))}</span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-400 rounded-xl text-xs font-bold border border-gray-200 mt-1 w-fit">
@@ -351,7 +351,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                         <div>
                           <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">Tipe Proteksi</p>
                           <p className="font-extrabold text-base">
-                            {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Kemitraan Khusus'))}
+                            {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Asuransi Kematian' : (cattleData.insurance.coverageType === 'KEHILANGAN' ? 'Asuransi Kehilangan' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Kemitraan Khusus')))}
                           </p>
                           <p className="text-[10px] text-white/50 mt-1">Status: <span className="text-emerald-400 font-bold">{cattleData.insurance.status}</span></p>
                         </div>
@@ -560,7 +560,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                 <div>
                   <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Tipe Proteksi</p>
                   <p className="font-extrabold text-[#17211B]">
-                    {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan (Modal Kembali)' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom / Kemitraan Khusus'))}
+                    {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan (Modal Kembali)' : (cattleData.insurance.coverageType === 'KEHILANGAN' ? 'Asuransi Kehilangan (Lepas Liar)' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom / Kemitraan Khusus')))}
                   </p>
                 </div>
                 <div>

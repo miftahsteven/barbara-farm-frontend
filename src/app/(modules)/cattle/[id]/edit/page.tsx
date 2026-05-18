@@ -29,9 +29,20 @@ export default function EditCattlePage({ params }: EditCattlePageProps) {
     );
   }
 
-  const handleSubmit = (data: any) => {
-    updateCattle(id, data);
-    router.push(`/cattle/${id}`);
+  const handleSubmit = async (data: any) => {
+    try {
+      const updated = await updateCattle(id, data);
+      
+      // If ID changed (due to KTP regenerated), redirect to new ID
+      if (updated && updated.id !== id) {
+        router.push(`/cattle/${encodeURIComponent(updated.id)}`);
+      } else {
+        router.push(`/cattle/${encodeURIComponent(id)}`);
+      }
+    } catch (err: any) {
+      console.error('Error updating cattle:', err);
+      alert(err.message || 'Gagal menyimpan perubahan data sapi.');
+    }
   };
 
   return (
