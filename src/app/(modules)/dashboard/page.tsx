@@ -18,10 +18,12 @@ import FarmMap from "@/components/dashboard/FarmMap"
 
 import { useGrowthStore } from "@/lib/useGrowthStore"
 import { useCattleStore } from "@/lib/useCattleStore"
+import { useSalesStore } from "@/lib/useSalesStore"
 
 export default function DashboardPage() {
   const { logs, fetchLogs } = useGrowthStore();
   const { cattle, fetchCattle } = useCattleStore();
+  const { sales, fetchSales } = useSalesStore();
 
   const [isMounted, setIsMounted] = React.useState(false);
 
@@ -29,7 +31,78 @@ export default function DashboardPage() {
     setIsMounted(true);
     fetchLogs();
     fetchCattle();
-  }, [fetchLogs, fetchCattle]);
+    fetchSales();
+  }, [fetchLogs, fetchCattle, fetchSales]);
+
+  const computedMetrics = React.useMemo(() => {
+    // 1. Total Sapi Aktif
+    const activeCattle = cattle.filter(c => c.status !== 'ARSIP');
+    const totalActive = activeCattle.length;
+    
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const addedThisMonth = activeCattle.filter(c => new Date(c.entryDate) >= startOfMonth).length;
+    const totalActiveTrend = addedThisMonth > 0 ? `+${addedThisMonth} bulan ini` : `+0 bulan ini`;
+
+    // 2. Rata-rata ADG
+    const latestLogs = activeCattle.map(c => {
+      const cowLogs = logs.filter(l => l.cattleId === c.id).sort((a, b) => new Date(b.weighDate).getTime() - new Date(a.weighDate).getTime());
+      return cowLogs[0];
+    }).filter(Boolean);
+
+    const avgAdg = latestLogs.reduce((acc, curr) => acc + (curr.adgKgPerDay || 0), 0) / (latestLogs.length || 1);
+    
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const prevMonthLogs = logs.filter(l => {
+      const d = new Date(l.weighDate);
+      return d >= prevMonthStart && d <= prevMonthEnd;
+    });
+    const prevAvgAdg = prevMonthLogs.length > 0
+      ? prevMonthLogs.reduce((acc, curr) => acc + (curr.adgKgPerDay || 0), 0) / prevMonthLogs.length
+      : 0;
+    const adgDiff = avgAdg - prevAvgAdg;
+    const adgTrend = prevAvgAdg > 0
+      ? `${adgDiff >= 0 ? '+' : ''}${adgDiff.toFixed(2)} dari bulan lalu`
+      : `+0.00 dari bulan lalu`;
+
+    // 3. Sapi Perlu Perhatian
+    const attentionCattle = activeCattle.filter(c => c.status === 'PEMANTAUAN').length;
+    const slowGrowthCattle = latestLogs.filter(l => l.status === 'slow' || l.status === 'attention').length;
+    const needAttentionCount = attentionCattle || slowGrowthCattle;
+    const attentionTrend = needAttentionCount > 0 ? `Butuh pengecekan` : `Butuh pengecekan`;
+
+    // 4. Estimasi Profit
+    const totalProfit = sales.reduce((acc, curr) => acc + (curr.projectedProfit || 0), 0);
+    const profitTrend = `Proyeksi berjalan`;
+
+    return [
+      {
+        label: 'Total Sapi Aktif',
+        value: totalActive.toString(),
+        suffix: 'ekor',
+        trend: totalActiveTrend,
+      },
+      {
+        label: 'Rata-rata ADG',
+        value: avgAdg > 0 ? avgAdg.toFixed(2) : '0.00',
+        suffix: 'kg/hari',
+        trend: adgTrend,
+      },
+      {
+        label: 'Sapi Perlu Perhatian',
+        value: needAttentionCount.toString(),
+        suffix: 'ekor',
+        trend: attentionTrend,
+      },
+      {
+        label: 'Estimasi Profit',
+        value: totalProfit > 0 ? `Rp ${totalProfit.toLocaleString('id-ID')}` : 'Rp 0',
+        suffix: '',
+        trend: profitTrend,
+      },
+    ];
+  }, [cattle, logs, sales]);
 
   const chartData = React.useMemo(() => {
     if (!cattle.length) return [];
@@ -53,11 +126,11 @@ export default function DashboardPage() {
                            .sort((a,b) => new Date(b.weighDate).getTime() - new Date(a.weighDate).getTime());
          
          if (cLogs.length > 0) {
-           totalWeight += cLogs[0].weightKg;
-           count++;
+            totalWeight += cLogs[0].weightKg;
+            count++;
          } else if (c.initialWeightKg > 0) {
-           totalWeight += c.initialWeightKg;
-           count++;
+            totalWeight += c.initialWeightKg;
+            count++;
          }
       });
       
@@ -83,7 +156,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {dashboardMetrics.map((metric, i) => {
+        {computedMetrics.map((metric, i) => {
           const icons = [Users, TrendingUp, AlertCircle, DollarSign]
           const Icon = icons[i]
           return (

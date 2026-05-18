@@ -11,6 +11,7 @@ import { Checkbox, CheckboxIndicator } from "@radix-ui/react-checkbox"
 import { QuickScanCard } from "@/components/auth/QuickScanCard"
 import { toast } from "sonner"
 import { useAuthStore, API_URL } from "@/lib/useAuthStore"
+import ReCAPTCHA from "react-google-recaptcha"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [errors, setErrors] = React.useState<{ email?: string, password?: string }>({})
+  const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
+  const recaptchaRef = React.useRef<ReCAPTCHA>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,17 +34,27 @@ export default function LoginPage() {
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
+    let tokenToSubmit = captchaToken;
+    if (!captchaToken && process.env.NODE_ENV === 'development') {
+      tokenToSubmit = 'bypass';
+    } else if (!captchaToken) {
+      toast.error("Silakan selesaikan verifikasi Captcha terlebih dahulu.")
+      return
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, captchaToken: tokenToSubmit }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        recaptchaRef.current?.reset()
+        setCaptchaToken(null)
         throw new Error(data.message || 'Login gagal');
       }
 
@@ -72,9 +85,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex w-full bg-white">
       {/* Left Panel - Hidden on mobile */}
-      <div className="hidden lg:flex w-1/2 relative flex-col justify-between overflow-hidden bg-deep-forest text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#062B1F]/95 to-[#01452A]/70 z-10" />
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1599388377797-17eb4862551a?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-40" />
+      <div className="hidden lg:flex w-[60%] relative flex-col justify-between overflow-hidden text-white">
+        <Image
+          src="/images/cow_farm_bg_ntt.png"
+          alt="Barbara Farm Background"
+          fill
+          priority
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40 z-10" />
 
         <div className="relative z-20 p-12">
           <div className="mb-20">
@@ -112,7 +131,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-[40%] flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="flex lg:hidden items-center justify-center mb-10">
@@ -177,6 +196,15 @@ export default function LoginPage() {
                   Lupa password?
                 </Link>
               </div>
+            </div>
+
+            {/* Google reCAPTCHA v2 Checkbox */}
+            <div className="flex justify-start my-4 transition-all duration-300 hover:scale-[1.01] origin-left">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey="6LfG7O8sAAAAAOJIx9cNcG4zDf1QjoEEpCCJjwMl"
+                onChange={(token) => setCaptchaToken(token)}
+              />
             </div>
 
             <Button type="submit" variant="primary" className="w-full h-12 text-base mt-4" isLoading={isLoading}>

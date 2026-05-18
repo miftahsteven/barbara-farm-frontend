@@ -50,13 +50,6 @@ export function UserDropdown() {
             </Link>
           </DropdownMenu.Item>
           
-          <DropdownMenu.Item className="flex items-center px-2 py-2 text-sm text-text-primary cursor-pointer hover:bg-page-background rounded-md outline-none" asChild>
-            <Link href="/settings/security">
-              <Shield className="mr-2 h-4 w-4 text-text-secondary" />
-              <span className="flex-1">Pengaturan Keamanan</span>
-            </Link>
-          </DropdownMenu.Item>
-
           <DropdownMenu.Separator className="h-px bg-border-neutral my-1" />
           
           <DropdownMenu.Item 

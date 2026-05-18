@@ -27,6 +27,55 @@ export interface Cattle {
   dam?: Cattle;
   latestWeightKg?: number;
   archiveReason?: string;
+  investorId?: string;
+  investor?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    profitSharePercent: number;
+  };
+  insurance?: {
+    id: string;
+    cattleId: string;
+    coverageType: string;
+    coveragePercent: number;
+    sumAssured: number;
+    premiumCost: number;
+    premiumPaymentType: string;
+    duration: string;
+    startDate: string;
+    endDate?: string;
+    status: string;
+    notes?: string;
+  };
+  sale?: {
+    id: string;
+    cattleId: string;
+    saleDate: string;
+    finalWeightKg: number;
+    salePrice: number;
+    destination: string;
+    buyerName?: string;
+    buyerPhone?: string;
+    deliveryAddress?: string;
+    paymentMethod?: string;
+    paymentStatus?: string;
+    downPayment: number;
+    purchasePrice: number;
+    totalFeedCost: number;
+    totalMedicalCost: number;
+    additionalOperationalCost: number;
+    totalProductionCost: number;
+    projectedProfit: number;
+    marginPercent: number;
+    sellingPricePerKg: number;
+    totalAdg: number;
+    status: string;
+    notes?: string;
+    weighProofUrl?: string;
+    paymentProofUrl?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

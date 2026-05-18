@@ -5,42 +5,74 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
 import { toast } from "sonner"
-import { dummyUser } from "@/lib/dummy-data"
+import { apiFetch } from "@/lib/useAuthStore"
+import type { UserProfile } from "@/app/(modules)/profile/page"
 
-export function EditProfileForm() {
+export function EditProfileForm({ profile, onUpdate }: { profile: UserProfile | null, onUpdate: () => void }) {
   const [isLoading, setIsLoading] = React.useState(false)
   const [formData, setFormData] = React.useState({
-    name: dummyUser.name,
-    email: dummyUser.email,
-    phone: dummyUser.phone,
-    farmName: dummyUser.farmName,
-    position: dummyUser.position,
-    location: dummyUser.location,
+    name: "",
+    email: "",
+    phone: "",
+    farmName: "",
+    position: "",
+    location: "",
   })
+
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        farmName: profile.farmName || "",
+        position: profile.position || "",
+        location: profile.location || "",
+      })
+    }
+  }, [profile])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
+
+    try {
+      const response = await apiFetch("/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal memperbarui profil")
+      }
+
       toast.success("Profil berhasil diperbarui.")
-    }, 1000)
+      onUpdate()
+    } catch (err: any) {
+      toast.error(err.message || "Gagal memperbarui profil.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleReset = () => {
-    setFormData({
-      name: dummyUser.name,
-      email: dummyUser.email,
-      phone: dummyUser.phone,
-      farmName: dummyUser.farmName,
-      position: dummyUser.position,
-      location: dummyUser.location,
-    })
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        farmName: profile.farmName || "",
+        position: profile.position || "",
+        location: profile.location || "",
+      })
+    }
   }
 
   return (
@@ -65,6 +97,7 @@ export function EditProfileForm() {
               value={formData.email}
               onChange={handleChange}
               required
+              disabled
             />
             <Input 
               label="Nomor WhatsApp *"

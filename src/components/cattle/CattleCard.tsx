@@ -63,6 +63,11 @@ export const CattleCard: React.FC<CattleCardProps> = ({ cattle, onShowQr }) => {
           alt={cattle.name} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        {cattle.investor && (
+          <div className="absolute top-3 left-3 px-3 py-1 bg-[#17211B]/80 text-white border border-white/10 rounded-full text-[9px] font-bold uppercase tracking-wider backdrop-blur-md">
+            Mitra: {cattle.investor.name}
+          </div>
+        )}
         <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider backdrop-blur-md ${getStatusStyle(cattle.status)}`}>
           {cattle.status.replace('_', ' ')}
         </div>

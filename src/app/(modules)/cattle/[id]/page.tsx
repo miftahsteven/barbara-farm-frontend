@@ -21,7 +21,9 @@ import {
   X,
   ExternalLink,
   ChevronLeft,
-  Navigation
+  Navigation,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
@@ -46,6 +48,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
   const [showQr, setShowQr] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTrackerModal, setShowTrackerModal] = useState(false);
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
 
   const { updateCattle } = useCattleStore();
 
@@ -268,6 +271,36 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                       <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1 tracking-widest">Nama Supplier</p>
                       <p className="font-bold text-[#17211B]">{cattleData.originName}</p>
                     </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1 tracking-widest">Investor Pemilik</p>
+                      {cattleData.investor ? (
+                        <div className="flex flex-col mt-0.5">
+                          <p className="font-bold text-[#006B3F]">{cattleData.investor.name}</p>
+                          <p className="text-[10px] text-[#68746D] font-medium">Bagi Hasil: {cattleData.investor.profitSharePercent}%</p>
+                        </div>
+                      ) : (
+                        <p className="font-bold text-[#68746D]">Barbara Farm (Milik Sendiri)</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1 tracking-widest">Proteksi Asuransi</p>
+                      {cattleData.insurance ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowInsuranceModal(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-[#006B3F] hover:bg-emerald-100 hover:text-emerald-800 rounded-xl text-xs font-bold transition-all border border-[#006B3F]/20 mt-1 cursor-pointer w-fit"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#006B3F]" />
+                          <span>{cattleData.insurance.coverageType === 'KEMATIAN' ? 'Asuransi Kematian' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom'))}</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-400 rounded-xl text-xs font-bold border border-gray-200 mt-1 w-fit">
+                          <ShieldAlert className="w-3.5 h-3.5 text-gray-400" />
+                          <span>Tidak Dilindungi</span>
+                        </div>
+                      )}
+                    </div>
+                    <div></div>
                   </div>
                 </section>
 
@@ -304,6 +337,52 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                     {cattleData.notes || 'Tidak ada catatan tambahan untuk sapi ini.'}
                   </p>
                 </section>
+
+                {cattleData.insurance && (
+                  <section className="lg:col-span-2 pt-8 border-t border-[#DDE7E1] space-y-4">
+                    <h3 className="text-xl font-bold text-[#17211B] flex items-center gap-3">
+                      <div className="w-1.5 h-6 bg-[#006B3F] rounded-full" />
+                      Status Proteksi Asuransi Sapi
+                    </h3>
+                    <div className="bg-gradient-to-br from-[#17211B] via-[#22352B] to-[#121A15] text-white p-8 rounded-[2.5rem] border border-[#006B3F]/20 shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-[#006B3F]/10 rounded-full blur-3xl pointer-events-none" />
+                      
+                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">Tipe Proteksi</p>
+                          <p className="font-extrabold text-base">
+                            {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Kemitraan Khusus'))}
+                          </p>
+                          <p className="text-[10px] text-white/50 mt-1">Status: <span className="text-emerald-400 font-bold">{cattleData.insurance.status}</span></p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">Nilai Pertanggungan</p>
+                          <p className="font-extrabold text-base">Rp {cattleData.insurance.sumAssured.toLocaleString('id-ID')}</p>
+                          <p className="text-[10px] text-white/50 mt-1">Batas Klaim: <span className="font-bold text-white">{cattleData.insurance.coveragePercent}% Modal</span></p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">Biaya & Bayar Premi</p>
+                          <p className="font-extrabold text-base">Rp {cattleData.insurance.premiumCost.toLocaleString('id-ID')}</p>
+                          <p className="text-[10px] text-white/50 mt-1">Metode: <span className="font-bold text-white">{cattleData.insurance.premiumPaymentType === 'DIAWAL' ? 'Bayar Di Awal (Upfront)' : 'Potong Hasil Akhir'}</span></p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">Masa Berlaku</p>
+                          <p className="font-extrabold text-base">
+                            {cattleData.insurance.duration.replace('_', ' ')}
+                          </p>
+                          <p className="text-[10px] text-white/50 mt-1">Mulai: <span className="font-bold text-white">{formatDate(cattleData.insurance.startDate)}</span></p>
+                        </div>
+                      </div>
+
+                      {cattleData.insurance.notes && (
+                        <div className="mt-6 pt-6 border-t border-white/10 text-xs text-white/70 leading-relaxed">
+                          <strong className="text-white block mb-1">Ketentuan Perjanjian Asuransi:</strong>
+                          {cattleData.insurance.notes}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
 
@@ -444,6 +523,92 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
         cattle={showTrackerModal ? (cattle.find(c => c.id === cattleData.id) || cattleData) : null}
         onClose={() => setShowTrackerModal(false)}
       />
+
+      {/* Insurance Modal */}
+      {showInsuranceModal && cattleData?.insurance && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-[#17211B]/80 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setShowInsuranceModal(false)}
+          />
+          
+          {/* Modal Card */}
+          <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-[#DDE7E1] animate-in zoom-in-95 duration-200 z-10">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#006B3F] to-[#004D2E] text-white p-8 relative">
+              <button 
+                onClick={() => setShowInsuranceModal(false)}
+                className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors cursor-pointer p-2 bg-white/10 hover:bg-white/20 rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-2xl">
+                  <ShieldCheck className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xl">Informasi Proteksi Asuransi</h4>
+                  <p className="text-[10px] text-[#A3E635] uppercase tracking-widest font-black mt-0.5">Barbara Farm Premium Custody</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-y-6 gap-x-8 text-sm">
+                <div>
+                  <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Tipe Proteksi</p>
+                  <p className="font-extrabold text-[#17211B]">
+                    {cattleData.insurance.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan (Modal Kembali)' : (cattleData.insurance.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis' : (cattleData.insurance.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom / Kemitraan Khusus'))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Masa Berlaku</p>
+                  <p className="font-extrabold text-[#17211B]">{cattleData.insurance.duration.replace('_', ' ')}</p>
+                  <p className="text-[10px] text-[#68746D] font-medium mt-0.5">Mulai: {formatDate(cattleData.insurance.startDate)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Uang Pertanggungan</p>
+                  <p className="font-black text-base text-[#006B3F]">Rp {cattleData.insurance.sumAssured.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-[#68746D] font-medium mt-0.5">Batas Ganti Rugi: {cattleData.insurance.coveragePercent}% Modal</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Biaya & Pembayaran Premi</p>
+                  <p className="font-extrabold text-[#17211B]">Rp {cattleData.insurance.premiumCost.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-[#68746D] font-medium mt-0.5">{cattleData.insurance.premiumPaymentType === 'DIAWAL' ? 'Dibayar di Awal (Upfront)' : 'Potong Bagi Hasil'}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black text-[#68746D] uppercase mb-1 tracking-widest">Status Proteksi</p>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-[#006B3F] border border-emerald-200 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {cattleData.insurance.status}
+                </span>
+              </div>
+
+              {cattleData.insurance.notes && (
+                <div className="p-5 bg-[#F7FAF8] border border-[#DDE7E1] rounded-[1.5rem]">
+                  <p className="text-[10px] font-black text-[#68746D] uppercase mb-1.5 tracking-widest">Syarat & Ketentuan Khusus</p>
+                  <p className="text-xs text-[#17211B] leading-relaxed whitespace-pre-wrap font-medium">{cattleData.insurance.notes}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-8 py-6 bg-[#F7FAF8] border-t border-[#DDE7E1] flex justify-end">
+              <button 
+                type="button"
+                onClick={() => setShowInsuranceModal(false)}
+                className="px-6 py-3 bg-[#17211B] hover:bg-black text-white rounded-xl text-xs font-black transition-all cursor-pointer shadow-md"
+              >
+                Tutup Rincian
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

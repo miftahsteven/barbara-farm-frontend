@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/useAuthStore"
 
 export function ChangePasswordForm() {
   const [isLoading, setIsLoading] = React.useState(false)
@@ -18,7 +19,7 @@ export function ChangePasswordForm() {
   const [confirmPassword, setConfirmPassword] = React.useState("")
   const [errors, setErrors] = React.useState<{newPassword?: string, confirmPassword?: string}>({})
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     const newErrors: any = {}
@@ -29,13 +30,27 @@ export function ChangePasswordForm() {
     if (Object.keys(newErrors).length > 0) return
 
     setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const response = await apiFetch('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Gagal mengubah password');
+      }
+
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
-      toast.success("Password berhasil diubah.")
-    }, 1000)
+      toast.success("Password berhasil diperbarui.");
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah password.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

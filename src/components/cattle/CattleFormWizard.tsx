@@ -4,6 +4,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Cattle } from '@/lib/useCattleStore';
 import { KtpSapiGenerator } from '@/components/cattle/KtpSapiGenerator';
 import { parseKtpSapi, BREED_OPTIONS } from '@/lib/generateKtpSapi';
+import { useInvestorStore } from '@/lib/useInvestorStore';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -65,6 +66,25 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
   const [purchasePriceDisplay, setPurchasePriceDisplay] = useState(
     initialData?.purchasePrice ? formatCurrency(initialData.purchasePrice) : ''
   );
+
+  const { investors, fetchInvestors } = useInvestorStore();
+
+  React.useEffect(() => {
+    fetchInvestors();
+  }, [fetchInvestors]);
+
+  const [hasInsurance, setHasInsurance] = useState(!!initialData?.insurance);
+  const [insuranceData, setInsuranceData] = useState({
+    coverageType: initialData?.insurance?.coverageType || 'KEMATIAN',
+    coveragePercent: initialData?.insurance?.coveragePercent || 100,
+    sumAssured: initialData?.insurance?.sumAssured || initialData?.purchasePrice || 0,
+    premiumCost: initialData?.insurance?.premiumCost || 0,
+    premiumPaymentType: initialData?.insurance?.premiumPaymentType || 'DIAWAL',
+    duration: initialData?.insurance?.duration || '1_TAHUN',
+    startDate: initialData?.insurance?.startDate ? new Date(initialData.insurance.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    notes: initialData?.insurance?.notes || '',
+    status: initialData?.insurance?.status || 'AKTIF'
+  });
 
   const [formData, setFormData] = useState<Partial<Cattle>>(() => {
     const data = initialData || {
@@ -132,8 +152,15 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
 
   const handlePurchasePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
-    setPurchasePriceDisplay(raw === '' ? '' : parseInt(raw, 10).toLocaleString('id-ID'));
-    setFormData(prev => ({ ...prev, purchasePrice: parseCurrency(e.target.value) }));
+    const price = raw === '' ? 0 : parseInt(raw, 10);
+    setPurchasePriceDisplay(raw === '' ? '' : price.toLocaleString('id-ID'));
+    setFormData(prev => ({ ...prev, purchasePrice: price }));
+    
+    // Auto-update sumAssured if unset or matching old price
+    setInsuranceData(prev => ({
+      ...prev,
+      sumAssured: prev.sumAssured === 0 || prev.sumAssured === formData.purchasePrice ? price : prev.sumAssured
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,6 +313,139 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                   className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
                 />
               </div>
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Investor Pemilik Sapi (Opsional)</label>
+                <select 
+                  name="investorId" value={formData.investorId || ''} onChange={handleChange}
+                  className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                >
+                  <option value="">-- Milik Barbara Farm Sendiri --</option>
+                  {investors.map(inv => (
+                    <option key={inv.id} value={inv.id}>{inv.name} (Bagi Hasil: {inv.profitSharePercent}%)</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[#68746D]">Hubungkan sapi ini dengan investor jika ini merupakan sapi titipan.</p>
+              </div>
+
+              {formData.investorId && (
+                <div className="space-y-4 col-span-1 md:col-span-2 border-t border-[#DDE7E1] pt-6 mt-2">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      id="hasInsurance"
+                      checked={hasInsurance}
+                      onChange={(e) => setHasInsurance(e.target.checked)}
+                      className="w-5 h-5 accent-[#006B3F] rounded border-[#DDE7E1] focus:ring-0 focus:outline-none cursor-pointer"
+                    />
+                    <label htmlFor="hasInsurance" className="text-sm font-black text-[#17211B] cursor-pointer">
+                      Aktifkan Proteksi Asuransi untuk Sapi Ini
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-[#68746D] pl-8">
+                    Model asuransi dapat disesuaikan per sapi berdasarkan kesepakatan kerjasama.
+                  </p>
+
+                  {hasInsurance && (
+                    <div className="pl-8 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in duration-200">
+                      {/* Tipe Asuransi */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Tipe Proteksi Asuransi</label>
+                        <select 
+                          value={insuranceData.coverageType}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, coverageType: e.target.value }))}
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                        >
+                          <option value="KEMATIAN">Asuransi Kematian & Kehilangan (Modal Kembali)</option>
+                          <option value="KESEHATAN_KRITIS">Kesehatan Kritis & Medis Ekstrem</option>
+                          <option value="GAGAL_TUMBUH">Proteksi Gagal Tumbuh / Stunting (FCR)</option>
+                          <option value="LAINNYA">Perjanjian Custom Lainnya</option>
+                        </select>
+                      </div>
+
+                      {/* Durasi Pertanggungan */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Durasi Pertanggungan</label>
+                        <select 
+                          value={insuranceData.duration}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, duration: e.target.value }))}
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                        >
+                          <option value="6_BULAN">6 Bulan</option>
+                          <option value="1_TAHUN">1 Tahun</option>
+                          <option value="2_TAHUN">2 Tahun</option>
+                          <option value="SEUMUR_HIDUP">Seumur Hidup</option>
+                        </select>
+                      </div>
+
+                      {/* Uang Pertanggungan */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Nilai Pertanggungan / Modal (Rp)</label>
+                        <input 
+                          type="number"
+                          value={insuranceData.sumAssured || ''}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, sumAssured: Number(e.target.value) }))}
+                          placeholder="Rp 0"
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                        />
+                        <p className="text-[9px] text-[#68746D]">Nilai dasar modal yang akan dilindungi oleh asuransi.</p>
+                      </div>
+
+                      {/* Persentase Pertanggungan */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Batas Ganti Rugi (%)</label>
+                        <div className="relative">
+                          <input 
+                            type="number" min="1" max="100"
+                            value={insuranceData.coveragePercent}
+                            onChange={e => setInsuranceData(prev => ({ ...prev, coveragePercent: Number(e.target.value) }))}
+                            placeholder="100"
+                            className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                          />
+                          <span className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#68746D]">%</span>
+                        </div>
+                        <p className="text-[9px] text-[#68746D]">Persentase modal kembali jika sapi mati/hilang (misal 70% atau 100%).</p>
+                      </div>
+
+                      {/* Biaya Premi */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Biaya Premi Asuransi (Rp)</label>
+                        <input 
+                          type="number"
+                          value={insuranceData.premiumCost || ''}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, premiumCost: Number(e.target.value) }))}
+                          placeholder="Rp 0"
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                        />
+                      </div>
+
+                      {/* Metode Pembayaran Premi */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Metode Pembayaran Premi</label>
+                        <select 
+                          value={insuranceData.premiumPaymentType}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, premiumPaymentType: e.target.value }))}
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-bold focus:outline-none focus:border-[#006B3F]"
+                        >
+                          <option value="DIAWAL">Dibayar di Awal (Upfront)</option>
+                          <option value="DIAKHIR">Dibayar di Akhir (Potong Bagi Hasil)</option>
+                        </select>
+                      </div>
+
+                      {/* Catatan Asuransi */}
+                      <div className="space-y-2 col-span-1 sm:col-span-2">
+                        <label className="text-xs font-bold text-[#68746D] uppercase tracking-wider">Catatan Perjanjian Asuransi</label>
+                        <textarea 
+                          value={insuranceData.notes}
+                          onChange={e => setInsuranceData(prev => ({ ...prev, notes: e.target.value }))}
+                          placeholder="Detail kesepakatan khusus..."
+                          rows={2}
+                          className="w-full px-5 py-3.5 bg-white border border-[#DDE7E1] rounded-2xl font-medium focus:outline-none focus:border-[#006B3F]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -398,6 +558,36 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
               <p className="font-black text-white text-xl font-mono break-all">{generatedKtp || formData.id}</p>
             </div>
 
+            {/* Insurance Summary Card if Active */}
+            {hasInsurance && formData.investorId && (
+              <div className="p-5 bg-gradient-to-r from-emerald-950 to-[#17211B] rounded-3xl text-white space-y-3 shadow-md border border-[#006B3F]/20">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Proteksi Asuransi Sapi Aktif</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="opacity-60 block text-[9px] uppercase tracking-wider">Tipe Proteksi</span>
+                    <span className="font-bold">
+                      {insuranceData.coverageType === 'KEMATIAN' ? 'Kematian & Kehilangan (Modal Kembali)' : (insuranceData.coverageType === 'KESEHATAN_KRITIS' ? 'Kesehatan Kritis & Medis' : (insuranceData.coverageType === 'GAGAL_TUMBUH' ? 'Gagal Tumbuh / Stunting' : 'Custom'))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="opacity-60 block text-[9px] uppercase tracking-wider">Nilai Pertanggungan</span>
+                    <span className="font-bold">Rp {insuranceData.sumAssured.toLocaleString('id-ID')} ({insuranceData.coveragePercent}%)</span>
+                  </div>
+                  <div>
+                    <span className="opacity-60 block text-[9px] uppercase tracking-wider">Biaya Premi</span>
+                    <span className="font-bold">Rp {insuranceData.premiumCost.toLocaleString('id-ID')} ({insuranceData.premiumPaymentType === 'DIAWAL' ? 'Di Awal' : 'Di Akhir'})</span>
+                  </div>
+                  <div>
+                    <span className="opacity-60 block text-[9px] uppercase tracking-wider">Durasi</span>
+                    <span className="font-bold">{insuranceData.duration.replace('_', ' ')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Summary grid */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[
@@ -409,6 +599,7 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                 { label: 'Harga Beli', value: formData.purchasePrice ? `Rp ${formatCurrency(formData.purchasePrice)}` : '-' },
                 { label: 'Tgl Masuk', value: formData.entryDate || '-' },
                 { label: 'Umur Sapi', value: calcAgeMonths(formData.birthDate) },
+                { label: 'Investor Pemilik', value: investors.find(inv => inv.id === formData.investorId)?.name || 'Barbara Farm (Milik Sendiri)' },
               ].map(item => (
                 <div key={item.label} className="p-3 bg-white rounded-2xl">
                   <p className="text-[10px] font-bold text-[#68746D] uppercase mb-1">{item.label}</p>
@@ -462,7 +653,8 @@ export const CattleFormWizard: React.FC<CattleFormWizardProps> = ({
                 isDam: formData.gender === 'BETINA',
                 estimatedAgeMonths: ageMonths > 0 ? ageMonths : undefined,
                 damId: formData.damId,
-                notes: formData.notes
+                notes: formData.notes,
+                insurance: hasInsurance && formData.investorId ? insuranceData : null
               });
             } : nextStep}
             className="flex items-center gap-2 px-10 py-4 bg-[#006B3F] hover:bg-[#004D2E] text-white rounded-2xl font-black transition-all shadow-lg shadow-[#006B3F]/20"

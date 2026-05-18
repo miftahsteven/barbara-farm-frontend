@@ -49,6 +49,7 @@ const menuGroups: MenuGroup[] = [
       { name: "Kesehatan & Medis", href: "/health", icon: Stethoscope },
       { name: "Manajemen Pakan", href: "/feeding", icon: Wheat },
       { name: "Penjualan", href: "/sales", icon: DollarSign },
+      { name: "Investasi & Investor", href: "/investors", icon: Users },
     ]
   },
   {
@@ -95,49 +96,56 @@ export function Sidebar({ className, onClose }: { className?: string, onClose?: 
 
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-6 px-4">
-          {menuGroups.map((group, idx) => (
-            <div key={idx}>
-              <h4 className="mb-2 px-2 text-xs font-semibold text-text-secondary tracking-wider">
-                {group.title}
-              </h4>
-              <div className="space-y-1">
-                {group.items
-                  .filter(item => item.name !== "Manajemen User" || isAdmin)
-                  .map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                    return item.disabled ? (
-                      <div
-                        key={item.name}
-                        className="group flex items-center rounded-xl px-3 py-2 text-sm font-medium text-text-secondary opacity-50 cursor-not-allowed"
-                      >
-                        <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                        {item.name}
-                      </div>
-                    ) : (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={onClose}
-                        className={cn(
-                          "group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-soft-green-surface text-primary-green"
-                            : "text-text-secondary hover:bg-page-background hover:text-text-primary"
-                        )}
-                      >
-                        <item.icon
+          {menuGroups
+            .filter(group => group.title !== "ANALITIK")
+            .map((group, idx) => (
+              <div key={idx}>
+                <h4 className="mb-2 px-2 text-xs font-semibold text-text-secondary tracking-wider">
+                  {group.title}
+                </h4>
+                <div className="space-y-1">
+                  {group.items
+                    .filter(item => {
+                      if (item.name === "Manajemen User" || item.name === "Pengaturan") {
+                        return isAdmin;
+                      }
+                      return true;
+                    })
+                    .map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                      return item.disabled ? (
+                        <div
+                          key={item.name}
+                          className="group flex items-center rounded-xl px-3 py-2 text-sm font-medium text-text-secondary opacity-50 cursor-not-allowed"
+                        >
+                          <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                          {item.name}
+                        </div>
+                      ) : (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          onClick={onClose}
                           className={cn(
-                            "mr-3 h-5 w-5 flex-shrink-0",
-                            isActive ? "text-primary-green" : "text-text-secondary group-hover:text-text-primary"
+                            "group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-soft-green-surface text-primary-green"
+                              : "text-text-secondary hover:bg-page-background hover:text-text-primary"
                           )}
-                        />
-                        {item.name}
-                      </Link>
-                    )
-                  })}
+                        >
+                          <item.icon
+                            className={cn(
+                              "mr-3 h-5 w-5 flex-shrink-0",
+                              isActive ? "text-primary-green" : "text-text-secondary group-hover:text-text-primary"
+                            )}
+                          />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </nav>
       </div>
 

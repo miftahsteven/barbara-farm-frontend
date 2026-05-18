@@ -56,6 +56,7 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">ID Sapi</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Informasi</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Ras</th>
+              <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Pemilik/Investor</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Berat</th>
               <th className="px-6 py-4 text-[10px] font-bold text-[#68746D] uppercase tracking-widest">Status</th>
               {(cattle.some(c => c.status === 'ARSIP') || cattle.some(c => c.status === 'TERJUAL')) && (
@@ -90,6 +91,16 @@ export const CattleTable: React.FC<CattleTableProps> = ({ cattle, onShowQr, onAr
                   </div>
                 </td>
                 <td className="px-6 py-4 font-bold text-[#17211B] text-xs uppercase">{getBreedName(item.breed)}</td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <p className="font-bold text-[#17211B] text-xs">
+                      {item.investor ? item.investor.name : 'Barbara Farm'}
+                    </p>
+                    {item.investor && (
+                      <p className="text-[9px] text-[#006B3F] font-bold">Share: {item.investor.profitSharePercent}%</p>
+                    )}
+                  </div>
+                </td>
                 <td className="px-6 py-4">
                   <p className="font-bold text-[#17211B] text-[13px] whitespace-nowrap">{item.latestWeightKg || item.initialWeightKg} Kg</p>
                   <p className="text-[10px] text-[#68746D] whitespace-nowrap">Awal: {item.initialWeightKg} Kg</p>
