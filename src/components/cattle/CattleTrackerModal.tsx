@@ -68,8 +68,9 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
   const [isLostSignal, setIsLostSignal] = useState(false);
   const [distanceFromFarm, setDistanceFromFarm] = useState(0);
   const [mapReady, setMapReady] = useState(false);
-  const [countdown, setCountdown] = useState(30);
+  const [countdown, setCountdown] = useState(60);
   const [hasGpsTracker, setHasGpsTracker] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   // History states
   const [historyStart, setHistoryStart] = useState<string>(() => {
@@ -93,7 +94,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
         setIsAutoRefresh(false);
       } else {
         setIsAutoRefresh(true);
-        setCountdown(30);
+        setCountdown(60);
       }
     }
   }, [initialMode]);
@@ -153,6 +154,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
 
         setGpsData(data);
         setLastUpdated(new Date());
+        setIsRateLimited(false);
         
         const isNearDepok = data.lon < 110;
         const hqLon = isNearDepok ? DEPOK_LON : FARM_LON;
@@ -163,11 +165,21 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
         setIsLostSignal(signalPct < 20);
       } else {
         console.error("Failed to load device details from GPS.id API:", result);
-        const errMsg = result.message || 'Gagal mengambil data koordinat GPS terupdate dari server.';
+        const is429 = res.status === 429 || result.isRateLimit || (result.message && (result.message.includes('429') || result.message.toLowerCase().includes('limit')));
+        if (is429) {
+          setIsRateLimited(true);
+        }
+        const errMsg = result.message || (res.status === 429 
+          ? 'Batas limitasi API GPS.id terlampaui. Pihak vendor membatasi pembaruan lokasi maksimal 5x per 5 menit. Silakan tunggu 1 menit untuk mencoba kembali.'
+          : 'Gagal mengambil data koordinat GPS terupdate dari server.');
         toast.error(errMsg);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching live GPS data:", error);
+      const is429 = error.message?.includes('429') || error.message?.toLowerCase().includes('limit');
+      if (is429) {
+        setIsRateLimited(true);
+      }
       toast.error('Gagal memproses data GPS dari server.');
     } finally {
       setIsLoading(false);
@@ -238,6 +250,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
           };
         });
         setHistoryPoints(normalized);
+        setIsRateLimited(false);
         if (normalized.length === 0) {
           toast.info('Tidak ada data history untuk rentang waktu ini.');
         } else {
@@ -260,12 +273,24 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
           };
         });
         setHistoryPoints(normalized);
+        setIsRateLimited(false);
       } else {
         setHistoryPoints([]);
-        toast.error(result.message || 'Tidak ada data history untuk rentang waktu ini.');
+        const is429 = res.status === 429 || result.isRateLimit || (result.message && (result.message.includes('429') || result.message.toLowerCase().includes('limit')));
+        if (is429) {
+          setIsRateLimited(true);
+        }
+        const errMsg = result.message || (res.status === 429 
+          ? 'Batas limitasi API GPS.id terlampaui. Pihak vendor membatasi pemanggilan riwayat pergerakan maksimal 5x per 5 menit. Silakan tunggu 1 menit.'
+          : 'Tidak ada data history untuk rentang waktu ini.');
+        toast.error(errMsg);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching GPS history:", error);
+      const is429 = error.message?.includes('429') || error.message?.toLowerCase().includes('limit');
+      if (is429) {
+        setIsRateLimited(true);
+      }
       toast.error('Gagal mengambil history GPS dari server.');
     } finally {
       setIsFetchingHistory(false);
@@ -539,7 +564,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
       setCountdown(prev => {
         if (prev <= 1) { 
           fetchGPS(true); // pass true to bypass backend cache
-          return 30; 
+          return 60; 
         }
         return prev - 1;
       });
@@ -692,6 +717,17 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-[#0f1f16]/40">
                     {/* History Filters */}
                     <div className="p-4 space-y-4 shrink-0 border-b border-[#1e3a28]">
+                      {isRateLimited && (
+                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl mb-3 flex gap-2 text-red-400 animate-in slide-in-from-top-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[11px] font-bold">Batas API Tercapai (429)</p>
+                            <p className="text-[9px] text-red-300/80 mt-0.5 leading-normal">
+                              Pihak GPS.id membatasi pemanggilan data maksimal 5x per 5 menit (rata-rata 1x per menit). Silakan tunggu 1 menit.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-[#0284c7]" />
                         <span>Filter Riwayat</span>
@@ -788,6 +824,20 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                     {/* Scrollable container for stats & coordinates */}
                     <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+                      {isRateLimited && (
+                        <div className="p-4 bg-red-500/10 border-b border-red-500/30 animate-in slide-in-from-top-2">
+                          <div className="flex gap-2 text-red-400">
+                            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-bold leading-tight">Batas API Tercapai (429)</p>
+                              <p className="text-[10px] text-red-300/80 mt-1 leading-normal">
+                                Pihak GPS.id membatasi pembaruan lokasi maksimal 5x per 5 menit (rata-rata 1x per menit). Silakan tunggu 1 menit untuk melakukan refresh manual.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* GPS Stats (Live and Current modes) */}
                       <div className="p-4 space-y-3">
                         <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest">Status Perangkat</p>
@@ -885,7 +935,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
                             {isAutoRefresh ? `Auto Refresh (${countdown}s)` : 'Mulai Auto Refresh'}
                           </button>
                           <p className="text-center text-[10px] text-[#4a7a5e]">
-                            {isAutoRefresh ? 'Refresh otomatis setiap 30 detik' : 'Auto refresh dinonaktifkan'}
+                            {isAutoRefresh ? 'Refresh otomatis setiap 1 menit' : 'Auto refresh dinonaktifkan'}
                           </p>
                         </>
                       ) : (
