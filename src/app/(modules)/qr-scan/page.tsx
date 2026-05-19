@@ -239,7 +239,7 @@ function QRScanPageContent() {
             />
           </div>
           <div>
-            <p className="text-lg font-bold text-text-primary">ID: {generatedQr?.split(':').pop()}</p>
+            <p className="text-lg font-bold text-text-primary">ID: {generatedQr?.split('/').pop()}</p>
             <p className="text-sm text-text-secondary mt-1">Scan kode ini dengan HP untuk mendaftarkan data sapi baru.</p>
           </div>
           <div className="flex gap-3 w-full">
