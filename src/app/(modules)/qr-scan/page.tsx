@@ -16,8 +16,8 @@ import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
 
 const getFrontendBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_FRONTEND_URL) return process.env.NEXT_PUBLIC_FRONTEND_URL;
   if (typeof window !== 'undefined') return `${window.location.protocol}//${window.location.host}`;
+  if (process.env.NEXT_PUBLIC_FRONTEND_URL) return process.env.NEXT_PUBLIC_FRONTEND_URL;
   return 'https://barbarafarm.id';
 };
 
