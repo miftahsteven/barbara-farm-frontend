@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toast } from 'sonner';
 
 interface User {
   id: string;
@@ -55,31 +56,38 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     ...options.headers,
   };
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  if (response.status === 401 || response.status === 403) {
-    try {
-      const clone = response.clone();
-      const body = await clone.json().catch(() => ({}));
-      const msg = (body && body.message) ? String(body.message) : '';
-      
-      const isAuthError = 
-        msg.includes('token') || 
-        msg.includes('expired') || 
-        msg.includes('Authentication') || 
-        msg.includes('Unauthorized') ||
-        msg.includes('denied');
+    if (response.status === 401 || response.status === 403) {
+      try {
+        const clone = response.clone();
+        const body = await clone.json().catch(() => ({}));
+        const msg = (body && body.message) ? String(body.message) : '';
         
-      if (isAuthError) {
-        useAuthStore.getState().logout();
+        const isAuthError = 
+          msg.includes('token') || 
+          msg.includes('expired') || 
+          msg.includes('Authentication') || 
+          msg.includes('Unauthorized') ||
+          msg.includes('denied');
+          
+        if (isAuthError) {
+          useAuthStore.getState().logout();
+        }
+      } catch (e) {
+        // Ignore parser errors and do not log out
       }
-    } catch (e) {
-      // Ignore parser errors and do not log out
     }
-  }
 
-  return response;
+    return response;
+  } catch (error: any) {
+    if (typeof window !== 'undefined') {
+      toast.error('Gagal menghubungkan ke server. Pastikan server backend Anda berjalan.');
+    }
+    throw error;
+  }
 };

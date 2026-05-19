@@ -23,7 +23,8 @@ import {
   ChevronLeft,
   Navigation,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
@@ -48,6 +49,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
   const [showQr, setShowQr] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTrackerModal, setShowTrackerModal] = useState(false);
+  const [trackerMode, setTrackerMode] = useState<'live' | 'current' | 'history'>('live');
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
 
   const { updateCattle } = useCattleStore();
@@ -395,18 +397,25 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={() => setShowTrackerModal(true)}
-                    className="flex items-center justify-center gap-2 px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black transition-all shadow-lg shadow-red-500/20"
+                    onClick={() => { setTrackerMode('live'); setShowTrackerModal(true); }}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black transition-all shadow-lg shadow-red-500/20 cursor-pointer"
                   >
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
                     Live Tracking
                   </button>
                   <button
-                    onClick={() => setShowTrackerModal(true)}
-                    className="flex items-center justify-center gap-2 px-8 py-4 bg-[#006B3F] hover:bg-[#004D2E] text-white rounded-2xl font-black transition-all shadow-lg shadow-[#006B3F]/20"
+                    onClick={() => { setTrackerMode('current'); setShowTrackerModal(true); }}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-[#006B3F] hover:bg-[#004D2E] text-white rounded-2xl font-black transition-all shadow-lg shadow-[#006B3F]/20 cursor-pointer"
                   >
                     <Navigation className="w-5 h-5" />
                     Posisi Sekarang
+                  </button>
+                  <button
+                    onClick={() => { setTrackerMode('history'); setShowTrackerModal(true); }}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded-2xl font-black transition-all shadow-lg shadow-[#0284c7]/20 cursor-pointer"
+                  >
+                    <Clock className="w-5 h-5" />
+                    History Tracking
                   </button>
                 </div>
                 <div className="mt-10 grid grid-cols-3 gap-4 w-full max-w-md">
@@ -528,6 +537,7 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
       <CattleTrackerModal 
         cattle={showTrackerModal ? (cattle.find(c => c.id === cattleData.id) || cattleData) : null}
         onClose={() => setShowTrackerModal(false)}
+        initialMode={trackerMode}
       />
 
       {/* Insurance Modal */}
