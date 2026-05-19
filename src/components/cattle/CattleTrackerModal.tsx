@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Cattle } from '@/lib/useCattleStore';
+import { apiFetch } from '@/lib/useAuthStore';
 import {
   X, MapPin, Wifi, WifiOff, RefreshCw, Radio, ZoomIn, ZoomOut,
   Navigation, Clock, AlertTriangle, Signal, Battery, Thermometer
@@ -17,6 +18,8 @@ interface CattleTrackerModalProps {
 // Farm HQ location
 const FARM_LON = 121.843059;
 const FARM_LAT = -8.67932;
+const DEPOK_LON = 106.83416;
+const DEPOK_LAT = -6.36672;
 const FARM_RADIUS_KM = 2; // alert if > 2km from farm
 
 // Simulated GPS data for demo
@@ -62,38 +65,111 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
   const trailCoords = useRef<[number, number][]>([]);
 
   const [mode, setMode] = useState<'live' | 'current'>('live');
-  const [gpsData, setGpsData] = useState<ReturnType<typeof generateMockGPS> | null>(null);
+  const [gpsData, setGpsData] = useState<{
+    lat: number;
+    lon: number;
+    accuracy: number;
+    speed: number;
+    battery: number;
+    signal: number;
+    temperature: number;
+    timestamp: string;
+  } | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLostSignal, setIsLostSignal] = useState(false);
   const [distanceFromFarm, setDistanceFromFarm] = useState(0);
   const [mapReady, setMapReady] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(30);
+  const [hasGpsTracker, setHasGpsTracker] = useState(false);
 
-  const fetchGPS = useCallback(() => {
+  const fetchGPS = useCallback(async () => {
     if (!cattle) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      const data = generateMockGPS(cattle.id, Date.now());
-      setGpsData(data);
+    
+    const imei = cattle.eartagNo;
+    const isRealIMEI = imei && /^\d{15}$/.test(imei);
+
+    if (!isRealIMEI) {
+      // No real IMEI -> Show default Flores Farm NTT HQ empty map view
+      setHasGpsTracker(false);
+      setGpsData({
+        lat: FARM_LAT,
+        lon: FARM_LON,
+        accuracy: 0,
+        speed: 0,
+        battery: 0,
+        signal: 0,
+        temperature: 38.2, // normal body temp fallback
+        timestamp: new Date().toISOString(),
+      });
       setLastUpdated(new Date());
+      setDistanceFromFarm(0);
+      setIsLostSignal(false);
+      return;
+    }
+
+    setHasGpsTracker(true);
+    setIsLoading(true);
+    try {
+      const res = await apiFetch(`/gps/gpsid/devices/${imei}`);
+      const result = await res.json().catch(() => ({}));
+      
+      if (res.ok && result.status && result.message?.data) {
+        const dev = result.message.data;
+        const lat = parseFloat(dev.latitude);
+        const lon = parseFloat(dev.longitude);
+        
+        // Parse battery percentage safely
+        const batteryPct = typeof dev.battery === 'string' ? parseInt(dev.battery) : (dev.battery || 80);
+        
+        // Map GPS signal from the 1-4 or percentage value
+        const signalPct = dev.gsm_signal ? (parseInt(dev.gsm_signal) * 25) : 100;
+
+        const data = {
+          lat: isNaN(lat) ? FARM_LAT : lat,
+          lon: isNaN(lon) ? FARM_LON : lon,
+          accuracy: dev.accuracy ? parseFloat(dev.accuracy) : 5.0,
+          speed: dev.speed ? parseFloat(dev.speed) : 0,
+          battery: batteryPct,
+          signal: signalPct,
+          temperature: dev.temperature ? parseFloat(dev.temperature) : 38.2, // normal body temp fallback
+          timestamp: dev.last_update || new Date().toISOString(),
+        };
+
+        setGpsData(data);
+        setLastUpdated(new Date());
+        
+        const isNearDepok = data.lon < 110;
+        const hqLon = isNearDepok ? DEPOK_LON : FARM_LON;
+        const hqLat = isNearDepok ? DEPOK_LAT : FARM_LAT;
+        
+        const dist = calcDistanceKm(hqLat, hqLon, data.lat, data.lon);
+        setDistanceFromFarm(dist);
+        setIsLostSignal(signalPct < 20);
+      } else {
+        console.error("Failed to load device details from GPS.id API:", result);
+      }
+    } catch (error) {
+      console.error("Error fetching live GPS data:", error);
+    } finally {
       setIsLoading(false);
-      const dist = calcDistanceKm(FARM_LAT, FARM_LON, data.lat, data.lon);
-      setDistanceFromFarm(dist);
-      setIsLostSignal(data.signal < 20 || dist > FARM_RADIUS_KM);
-    }, 600);
+    }
   }, [cattle]);
 
   // Init map with exact ResizeObserver pattern from dashboard
   useEffect(() => {
     const container = mapContainer.current;
     if (!container || map.current) return;
+    if (!gpsData) return; // Wait until initial GPS coordinates are loaded!
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0 && !map.current) {
+          const initLon = gpsData.lon;
+          const initLat = gpsData.lat;
+
           map.current = new maplibregl.Map({
             container,
             style: {
@@ -108,7 +184,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
               },
               layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 22 }],
             },
-            center: [FARM_LON, FARM_LAT],
+            center: [initLon, initLat],
             zoom: 15,
             pitch: 30,
             attributionControl: false,
@@ -116,18 +192,23 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
 
           map.current.on('load', () => {
             if (!map.current) return;
-            map.current.setCenter([FARM_LON, FARM_LAT]);
+            map.current.setCenter([initLon, initLat]);
             map.current.resize();
             
             // Farm marker
+            const isNearDepok = initLon < 110;
+            const hqLon = isNearDepok ? DEPOK_LON : FARM_LON;
+            const hqLat = isNearDepok ? DEPOK_LAT : FARM_LAT;
+            const hqName = isNearDepok ? "🏠 Barbara Farm Office" : "🏠 Barbara Farm";
+
             const farmEl = document.createElement('div');
             farmEl.innerHTML = `
               <div style="display:flex;flex-direction:column;align-items:center;">
-                <div style="background:#006B3F;padding:4px 12px;border-radius:12px;border:2px solid white;color:white;font-weight:bold;font-size:12px;box-shadow:0 4px 12px rgba(0,107,63,0.4);white-space:nowrap;margin-bottom:4px;">🏠 Barbara Farm</div>
+                <div style="background:#006B3F;padding:4px 12px;border-radius:12px;border:2px solid white;color:white;font-weight:bold;font-size:12px;box-shadow:0 4px 12px rgba(0,107,63,0.4);white-space:nowrap;margin-bottom:4px;">${hqName}</div>
                 <div style="width:12px;height:12px;background:#006B3F;border:2px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>
               </div>`;
-            new maplibregl.Marker({ element: farmEl, anchor: 'bottom' })
-              .setLngLat([FARM_LON, FARM_LAT])
+            farmMarkerRef.current = new maplibregl.Marker({ element: farmEl, anchor: 'bottom' })
+              .setLngLat([hqLon, hqLat])
               .addTo(map.current!);
 
             // Trail source
@@ -159,13 +240,30 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
       map.current = null;
       trailSourceAdded.current = false;
       markerRef.current = null;
+      farmMarkerRef.current = null;
     };
-  }, [cattle]);
+  }, [gpsData]);
 
   // Update marker when gpsData changes
   useEffect(() => {
     if (!gpsData || !map.current || !mapReady) return;
     const { lat, lon } = gpsData;
+
+    if (!hasGpsTracker) {
+      // If no GPS tracker, remove cow marker if exists
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+      // Set trail to empty
+      if (trailSourceAdded.current && map.current) {
+        const src = map.current.getSource('trail') as maplibregl.GeoJSONSource;
+        src?.setData({ type: 'FeatureCollection', features: [] });
+      }
+      // Ease map to NTT Farm HQ
+      map.current.easeTo({ center: [FARM_LON, FARM_LAT], zoom: 14, duration: 1200 });
+      return;
+    }
 
     if (!markerRef.current) {
       const el = document.createElement('div');
@@ -199,22 +297,22 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
       }
       map.current.easeTo({ center: [lon, lat], duration: 1200 });
     }
-  }, [gpsData, mapReady, mode, cattle]);
+  }, [gpsData, mapReady, mode, cattle, hasGpsTracker]);
 
   // Initial fetch
   useEffect(() => { fetchGPS(); }, [fetchGPS]);
 
   // Auto refresh countdown (live mode)
   useEffect(() => {
-    if (mode !== 'live' || !isAutoRefresh) return;
+    if (mode !== 'live' || !isAutoRefresh || !hasGpsTracker) return;
     const interval = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) { fetchGPS(); return 5; }
+        if (prev <= 1) { fetchGPS(); return 30; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [mode, isAutoRefresh, fetchGPS]);
+  }, [mode, isAutoRefresh, fetchGPS, hasGpsTracker]);
 
   if (!cattle) return null;
 
@@ -238,10 +336,10 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
             <div className="w-10 h-10 rounded-xl bg-[#006B3F]/20 border border-[#006B3F]/30 flex items-center justify-center text-xl">🐄</div>
             <div>
               <h2 className="text-white font-black text-lg">{cattle.id}</h2>
-              <p className="text-[#6b9e7e] text-xs">{cattle.name} • GPS Tracker Kalung</p>
+              <p className="text-[#6b9e7e] text-xs">{cattle.name} • {hasGpsTracker ? 'GPS Tracker Kalung' : 'Tanpa GPS Tracker'}</p>
             </div>
             {/* Live badge */}
-            {mode === 'live' && isAutoRefresh && (
+            {mode === 'live' && isAutoRefresh && hasGpsTracker && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 border border-red-500/40 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                 <span className="text-red-400 text-xs font-bold">LIVE</span>
@@ -250,22 +348,24 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
           </div>
           <div className="flex items-center gap-3">
             {/* Mode Switch */}
-            <div className="flex bg-[#1a2f22] rounded-xl p-1 border border-[#1e3a28]">
-              <button
-                onClick={() => { setMode('live'); setIsAutoRefresh(true); setCountdown(5); trailCoords.current = []; }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'live' ? 'bg-red-500 text-white shadow-lg' : 'text-[#6b9e7e] hover:text-white'}`}
-              >
-                <Radio className="w-3.5 h-3.5" />
-                Live
-              </button>
-              <button
-                onClick={() => { setMode('current'); setIsAutoRefresh(false); }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'current' ? 'bg-[#006B3F] text-white shadow-lg' : 'text-[#6b9e7e] hover:text-white'}`}
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                Posisi Sekarang
-              </button>
-            </div>
+            {hasGpsTracker && (
+              <div className="flex bg-[#1a2f22] rounded-xl p-1 border border-[#1e3a28]">
+                <button
+                  onClick={() => { setMode('live'); setIsAutoRefresh(true); setCountdown(30); trailCoords.current = []; }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'live' ? 'bg-red-500 text-white shadow-lg' : 'text-[#6b9e7e] hover:text-white'}`}
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  Live
+                </button>
+                <button
+                  onClick={() => { setMode('current'); setIsAutoRefresh(false); }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'current' ? 'bg-[#006B3F] text-white shadow-lg' : 'text-[#6b9e7e] hover:text-white'}`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  Posisi Sekarang
+                </button>
+              </div>
+            )}
             <button
               onClick={onClose}
               className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#1a2f22] hover:bg-red-500/20 border border-[#1e3a28] hover:border-red-500/40 text-[#6b9e7e] hover:text-red-400 transition-all"
@@ -322,123 +422,141 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
 
           {/* Sidebar */}
           <div className="w-full md:w-[280px] border-t md:border-t-0 md:border-l border-[#1e3a28] flex flex-col overflow-y-auto shrink-0">
-            
-            {/* GPS Stats */}
-            <div className="p-4 space-y-3">
-              <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest">Status Perangkat</p>
-              
-              {/* Signal */}
-              <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                <div className="flex items-center gap-2">
-                  <Signal className="w-4 h-4" style={{ color: signalColor }} />
-                  <span className="text-white text-sm font-bold">Sinyal GPS</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-black" style={{ color: signalColor }}>{gpsData?.signal ?? '--'}%</p>
-                  <p className="text-[10px] text-[#4a7a5e]">{isLostSignal ? 'Lemah' : 'Baik'}</p>
+            {!hasGpsTracker ? (
+              <div className="p-6 text-center space-y-4 my-auto">
+                <div className="w-16 h-16 bg-[#006B3F]/10 border border-[#006B3F]/30 rounded-2xl flex items-center justify-center mx-auto text-3xl">🏞️</div>
+                <h3 className="text-white font-black text-sm">Tanpa GPS Tracker</h3>
+                <p className="text-[#6b9e7e] text-xs leading-relaxed">
+                  Sapi ini belum dipasang atau didaftarkan GPS Tracker M20.
+                </p>
+                <div className="p-4 bg-[#1a2f22] border border-[#1e3a28] rounded-xl text-left text-[11px] text-[#6b9e7e] leading-relaxed space-y-2">
+                  <div className="font-bold text-white flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-[#006B3F]" />
+                    <span>Peternakan Flores, NTT</span>
+                  </div>
+                  <p>Menampilkan lokasi fisik asli Barbara Farm di Flores, NTT.</p>
                 </div>
               </div>
+            ) : (
+              <>
+                {/* GPS Stats */}
+                <div className="p-4 space-y-3">
+                  <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest">Status Perangkat</p>
+                  
+                  {/* Signal */}
+                  <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                    <div className="flex items-center gap-2">
+                      <Signal className="w-4 h-4" style={{ color: signalColor }} />
+                      <span className="text-white text-sm font-bold">Sinyal GPS</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-black" style={{ color: signalColor }}>{gpsData?.signal ?? '--'}%</p>
+                      <p className="text-[10px] text-[#4a7a5e]">{isLostSignal ? 'Lemah' : 'Baik'}</p>
+                    </div>
+                  </div>
 
-              {/* Battery */}
-              <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                <div className="flex items-center gap-2">
-                  <Battery className="w-4 h-4" style={{ color: batteryColor }} />
-                  <span className="text-white text-sm font-bold">Baterai Kalung</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-black" style={{ color: batteryColor }}>{gpsData?.battery ?? '--'}%</p>
-                  <div className="w-16 h-1.5 bg-[#0f1f16] rounded-full mt-1 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${gpsData?.battery ?? 0}%`, background: batteryColor }} />
+                  {/* Battery */}
+                  <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                    <div className="flex items-center gap-2">
+                      <Battery className="w-4 h-4" style={{ color: batteryColor }} />
+                      <span className="text-white text-sm font-bold">Baterai Kalung</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-black" style={{ color: batteryColor }}>{gpsData?.battery ?? '--'}%</p>
+                      <div className="w-16 h-1.5 bg-[#0f1f16] rounded-full mt-1 overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${gpsData?.battery ?? 0}%`, background: batteryColor }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Temperature */}
+                  <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                    <div className="flex items-center gap-2">
+                      <Thermometer className="w-4 h-4 text-orange-400" />
+                      <span className="text-white text-sm font-bold">Suhu Tubuh</span>
+                    </div>
+                    <p className="text-orange-400 text-xs font-black">{gpsData?.temperature?.toFixed(1) ?? '--'}°C</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Temperature */}
-              <div className="flex items-center justify-between p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                <div className="flex items-center gap-2">
-                  <Thermometer className="w-4 h-4 text-orange-400" />
-                  <span className="text-white text-sm font-bold">Suhu Tubuh</span>
-                </div>
-                <p className="text-orange-400 text-xs font-black">{gpsData?.temperature?.toFixed(1) ?? '--'}°C</p>
-              </div>
-            </div>
+                <div className="border-t border-[#1e3a28] p-4 space-y-3">
+                  <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest">Koordinat GPS</p>
+                  
+                  <div className="space-y-2">
+                    <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                      <p className="text-[10px] text-[#4a7a5e] mb-0.5">Latitude</p>
+                      <p className="text-white font-mono text-sm font-bold">{gpsData?.lat.toFixed(6) ?? '--'}</p>
+                    </div>
+                    <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                      <p className="text-[10px] text-[#4a7a5e] mb-0.5">Longitude</p>
+                      <p className="text-white font-mono text-sm font-bold">{gpsData?.lon.toFixed(6) ?? '--'}</p>
+                    </div>
+                    <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                      <p className="text-[10px] text-[#4a7a5e] mb-0.5">Akurasi</p>
+                      <p className="text-white font-mono text-sm font-bold">±{gpsData?.accuracy.toFixed(1) ?? '--'} m</p>
+                    </div>
+                    <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
+                      <p className="text-[10px] text-[#4a7a5e] mb-0.5">Kecepatan Gerak</p>
+                      <p className="text-white font-mono text-sm font-bold">{gpsData?.speed.toFixed(1) ?? '--'} km/h</p>
+                    </div>
+                  </div>
 
-            <div className="border-t border-[#1e3a28] p-4 space-y-3">
-              <p className="text-[#6b9e7e] text-[10px] font-bold uppercase tracking-widest">Koordinat GPS</p>
-              
-              <div className="space-y-2">
-                <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                  <p className="text-[10px] text-[#4a7a5e] mb-0.5">Latitude</p>
-                  <p className="text-white font-mono text-sm font-bold">{gpsData?.lat.toFixed(6) ?? '--'}</p>
-                </div>
-                <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                  <p className="text-[10px] text-[#4a7a5e] mb-0.5">Longitude</p>
-                  <p className="text-white font-mono text-sm font-bold">{gpsData?.lon.toFixed(6) ?? '--'}</p>
-                </div>
-                <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                  <p className="text-[10px] text-[#4a7a5e] mb-0.5">Akurasi</p>
-                  <p className="text-white font-mono text-sm font-bold">±{gpsData?.accuracy.toFixed(1) ?? '--'} m</p>
-                </div>
-                <div className="p-3 bg-[#1a2f22] rounded-xl border border-[#1e3a28]">
-                  <p className="text-[10px] text-[#4a7a5e] mb-0.5">Kecepatan Gerak</p>
-                  <p className="text-white font-mono text-sm font-bold">{gpsData?.speed.toFixed(1) ?? '--'} km/h</p>
-                </div>
-              </div>
-
-              {/* Distance alert */}
-              {distanceFromFarm > 0 && (
-                <div className={`p-3 rounded-xl border flex items-start gap-2 ${distanceFromFarm > FARM_RADIUS_KM ? 'bg-red-500/10 border-red-500/30' : 'bg-[#006B3F]/10 border-[#006B3F]/30'}`}>
-                  {distanceFromFarm > FARM_RADIUS_KM ? (
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <MapPin className="w-4 h-4 text-[#4ade80] shrink-0 mt-0.5" />
+                  {/* Distance alert */}
+                  {distanceFromFarm > 0 && (
+                    <div className={`p-3 rounded-xl border flex items-start gap-2 ${distanceFromFarm > FARM_RADIUS_KM ? 'bg-red-500/10 border-red-500/30' : 'bg-[#006B3F]/10 border-[#006B3F]/30'}`}>
+                      {distanceFromFarm > FARM_RADIUS_KM ? (
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <MapPin className="w-4 h-4 text-[#4ade80] shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className={`text-xs font-bold ${distanceFromFarm > FARM_RADIUS_KM ? 'text-red-400' : 'text-[#4ade80]'}`}>
+                          {distanceFromFarm > FARM_RADIUS_KM ? '⚠️ Jauh dari Farm!' : '✅ Dalam Area Farm'}
+                        </p>
+                        <p className="text-[10px] text-[#4a7a5e]">Jarak: {formatDistanceText(distanceFromFarm)} dari HQ</p>
+                      </div>
+                    </div>
                   )}
-                  <div>
-                    <p className={`text-xs font-bold ${distanceFromFarm > FARM_RADIUS_KM ? 'text-red-400' : 'text-[#4ade80]'}`}>
-                      {distanceFromFarm > FARM_RADIUS_KM ? '⚠️ Jauh dari Farm!' : '✅ Dalam Area Farm'}
-                    </p>
-                    <p className="text-[10px] text-[#4a7a5e]">Jarak: {formatDistanceText(distanceFromFarm)} dari HQ</p>
+                </div>
+
+                {/* Controls */}
+                <div className="border-t border-[#1e3a28] p-4 space-y-3 mt-auto">
+                  {mode === 'live' ? (
+                    <>
+                      <button
+                        onClick={() => setIsAutoRefresh(prev => !prev)}
+                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm border transition-all ${
+                          isAutoRefresh
+                            ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
+                            : 'bg-[#006B3F]/20 border-[#006B3F]/40 text-[#4ade80] hover:bg-[#006B3F]/30'
+                        }`}
+                      >
+                        <Radio className="w-4 h-4" />
+                        {isAutoRefresh ? `Auto Refresh (${countdown}s)` : 'Mulai Auto Refresh'}
+                      </button>
+                      <p className="text-center text-[10px] text-[#4a7a5e]">
+                        {isAutoRefresh ? 'Refresh otomatis setiap 30 detik' : 'Auto refresh dinonaktifkan'}
+                      </p>
+                    </>
+                  ) : (
+                    <button
+                      onClick={fetchGPS}
+                      disabled={isLoading}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#006B3F]/20 border border-[#006B3F]/40 text-[#4ade80] rounded-xl font-bold text-sm hover:bg-[#006B3F]/30 transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      {isLoading ? 'Memuat...' : 'Refresh Posisi'}
+                    </button>
+                  )}
+
+                  {/* Last updated */}
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#4a7a5e]">
+                    <Clock className="w-3 h-3" />
+                    {lastUpdated ? `Update: ${lastUpdated.toLocaleTimeString('id-ID')}` : 'Belum ada data'}
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Controls */}
-            <div className="border-t border-[#1e3a28] p-4 space-y-3 mt-auto">
-              {mode === 'live' ? (
-                <>
-                  <button
-                    onClick={() => setIsAutoRefresh(prev => !prev)}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm border transition-all ${
-                      isAutoRefresh
-                        ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
-                        : 'bg-[#006B3F]/20 border-[#006B3F]/40 text-[#4ade80] hover:bg-[#006B3F]/30'
-                    }`}
-                  >
-                    <Radio className="w-4 h-4" />
-                    {isAutoRefresh ? `Auto Refresh (${countdown}s)` : 'Mulai Auto Refresh'}
-                  </button>
-                  <p className="text-center text-[10px] text-[#4a7a5e]">
-                    {isAutoRefresh ? 'Refresh otomatis setiap 5 detik' : 'Auto refresh dinonaktifkan'}
-                  </p>
-                </>
-              ) : (
-                <button
-                  onClick={fetchGPS}
-                  disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#006B3F]/20 border border-[#006B3F]/40 text-[#4ade80] rounded-xl font-bold text-sm hover:bg-[#006B3F]/30 transition-all disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  {isLoading ? 'Memuat...' : 'Refresh Posisi'}
-                </button>
-              )}
-
-              {/* Last updated */}
-              <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#4a7a5e]">
-                <Clock className="w-3 h-3" />
-                {lastUpdated ? `Update: ${lastUpdated.toLocaleTimeString('id-ID')}` : 'Belum ada data'}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

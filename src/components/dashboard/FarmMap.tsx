@@ -4,30 +4,17 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Filter, Plus, Minus, Layers, RefreshCw, MapPin } from "lucide-react";
+import { Filter, Plus, Minus, Layers, RefreshCw, MapPin, AlertTriangle } from "lucide-react";
 import { useCattleStore } from '@/lib/useCattleStore';
+import { apiFetch } from '@/lib/useAuthStore';
 
 interface FarmMapProps {
   className?: string;
 }
 
-const FARM_LON = 121.843059;
-const FARM_LAT = -8.67932;
-
-// Simulate GPS position for a cattle ID (random walk around farm)
-function getSimulatedPosition(cattleId: string, index: number, t: number) {
-  // Use a consistent seed per cattle so each has a unique orbit/radius
-  const seed = cattleId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const speed = 0.00008 + (seed % 11) * 0.000015;
-  const radius = 0.0003 + (index % 5) * 0.00014 + (seed % 7) * 0.00008;
-  const phaseOffset = (seed * 0.43) % (2 * Math.PI);
-  const angle = phaseOffset + t * speed;
-
-  return {
-    lat: FARM_LAT + Math.sin(angle) * radius,
-    lon: FARM_LON + Math.cos(angle) * radius * 1.1,
-  };
-}
+// Temporary Center: Depok, Jawa Barat
+const DEPOK_LON = 106.7942;
+const DEPOK_LAT = -6.4025;
 
 // Assign a color per cattle based on index
 const MARKER_COLORS = [
@@ -39,86 +26,149 @@ const MARKER_COLORS = [
 const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const cowMarkersRef = useRef<Record<string, maplibregl.Marker>>({});
-  const animFrameRef = useRef<number | null>(null);
+  const deviceMarkersRef = useRef<Record<string, maplibregl.Marker>>({});
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [mapReady, setMapReady] = useState(false);
+  const [gpsDevices, setGpsDevices] = useState<any[]>([]);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [showDiagModal, setShowDiagModal] = useState(false);
 
   // Pull AKTIF cattle from the store (real data)
   const { cattle, fetchCattle } = useCattleStore();
   const activeCattle = cattle.filter(c => c.status === 'AKTIF' || c.status === 'PEMANTAUAN' || c.status === 'SIAP_JUAL');
 
-  // Fetch cattle on mount if not already loaded
+  // Fetch real GPS devices from backend
+  const fetchGPSDevices = useCallback(async () => {
+    try {
+      setGpsError(null);
+      const res = await apiFetch('/gps/gpsid/devices');
+      const data = await res.json().catch(() => ({}));
+      
+      if (res.ok) {
+        if (data.status && data.message?.data) {
+          setGpsDevices(data.message.data);
+        } else {
+          setGpsError("Format respons GPS.id tidak valid");
+        }
+      } else {
+        setGpsError(data.error || data.message || "Gagal mengambil data dari vendor");
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch GPS devices:', error);
+      setGpsError(error.message || 'Gagal menghubungi server backend');
+    }
+  }, []);
+
+  // Fetch cattle and GPS devices on mount
   useEffect(() => {
     if (cattle.length === 0) fetchCattle();
-  }, [cattle.length, fetchCattle]);
+    fetchGPSDevices();
+    setLastUpdate(new Date().toLocaleTimeString('id-ID'));
+  }, [cattle.length, fetchCattle, fetchGPSDevices]);
 
-  // Animate cattle markers
-  const animateMarkers = useCallback(() => {
-    if (!map.current || !mapReady || activeCattle.length === 0) return;
-    const t = Date.now() * 0.001; // seconds
+  // Update Markers when Map is ready or GPS devices / Active Cattle changes
+  useEffect(() => {
+    if (!map.current || !mapReady) return;
 
-    activeCattle.forEach((cow, index) => {
-      const pos = getSimulatedPosition(cow.id, index, t);
+    gpsDevices.forEach((device, index) => {
+      const imei = device.imei;
+      const lon = parseFloat(device.longitude);
+      const lat = parseFloat(device.latitude);
+
+      if (isNaN(lon) || isNaN(lat)) return;
+
+      // Map GPS device to the corresponding active cattle
+      // Try to match eartagNo with the IMEI number, fallback to mapping by index
+      const associatedCattle = activeCattle.find(c => c.eartagNo === imei) || activeCattle[index] || null;
+      const displayId = associatedCattle ? associatedCattle.id : `GPS-${imei.slice(-4)}`;
+      const displayName = associatedCattle ? (associatedCattle.name || 'Sapi GPS') : device.device_name;
+      const pen = associatedCattle ? associatedCattle.pen : 'Lepas Kandang';
       const color = MARKER_COLORS[index % MARKER_COLORS.length];
 
-      if (cowMarkersRef.current[cow.id]) {
-        // Just update position smoothly
-        cowMarkersRef.current[cow.id].setLngLat([pos.lon, pos.lat]);
+      if (deviceMarkersRef.current[imei]) {
+        // Smoothly update position if marker already exists
+        deviceMarkersRef.current[imei].setLngLat([lon, lat]);
       } else {
-        // Create marker
+        // Create custom interactive marker
         const el = document.createElement('div');
+        el.className = 'gps-marker-container';
         el.innerHTML = `
-          <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;" title="${cow.id}${cow.name ? ' - ' + cow.name : ''}">
-            <div style="background:rgba(15,31,22,0.88);color:white;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:800;white-space:nowrap;border:1px solid ${color}66;margin-bottom:3px;letter-spacing:0.5px;">${cow.id}</div>
-            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,${color},${color}aa);border:2.5px solid white;box-shadow:0 3px 14px ${color}55;display:flex;align-items:center;justify-content:center;font-size:16px;">🐄</div>
+          <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;" title="${displayId} - ${displayName}">
+            <div style="background:rgba(15,31,22,0.92);color:white;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:800;white-space:nowrap;border:1.5px solid ${color};margin-bottom:3px;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${displayId}</div>
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,${color},${color}aa);border:2.5px solid white;box-shadow:0 3px 14px ${color}77;display:flex;align-items:center;justify-content:center;font-size:18px;transition: transform 0.2s;">🐄</div>
           </div>`;
 
-        const popup = new maplibregl.Popup({ offset: 28, closeButton: false, maxWidth: '200px' })
+        // Scale effect on hover
+        el.addEventListener('mouseenter', () => {
+          const cowEmoji = el.querySelector('div:last-child') as HTMLElement;
+          if (cowEmoji) cowEmoji.style.transform = 'scale(1.15)';
+        });
+        el.addEventListener('mouseleave', () => {
+          const cowEmoji = el.querySelector('div:last-child') as HTMLElement;
+          if (cowEmoji) cowEmoji.style.transform = 'scale(1)';
+        });
+
+        const popup = new maplibregl.Popup({ offset: 32, closeButton: false, maxWidth: '280px' })
           .setHTML(`
-            <div style="font-family:sans-serif;padding:4px 2px;">
-              <strong style="color:#006B3F;font-size:13px;">${cow.id}</strong>
-              ${cow.name ? `<br/><span style="font-size:11px;color:#444;">${cow.name}</span>` : ''}
-              <br/><span style="font-size:10px;color:#888;">📍 GPS Aktif · Kandang ${cow.pen || '-'}</span>
+            <div style="font-family:sans-serif;padding:6px;min-width:180px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-bottom:1px solid #eee;padding-bottom:4px;">
+                <strong style="color:#006B3F;font-size:13px;">${displayId}</strong>
+                <span style="font-size:9px;background:#e8f5e9;color:#2e7d32;padding:2px 6px;border-radius:10px;font-weight:bold;margin-left:auto;">GPS ONLINE</span>
+              </div>
+              <div style="font-size:11px;color:#333;margin-bottom:2px;"><strong>Nama:</strong> ${displayName}</div>
+              <div style="font-size:10px;color:#666;margin-bottom:2px;"><strong>Kandang:</strong> ${pen}</div>
+              <div style="font-size:10px;color:#666;margin-bottom:4px;"><strong>IMEI:</strong> ${imei}</div>
+              <div style="margin-top:6px;padding-top:4px;border-top:1px dashed #eee;font-size:9px;color:#888;line-height:1.4;">
+                📍 Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}<br/>
+                ⚡ Kecepatan: ${device.speed || 0} km/h<br/>
+                🕒 Update Terakhir: ${device.last_update || '-'}
+              </div>
             </div>`);
 
-        cowMarkersRef.current[cow.id] = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([pos.lon, pos.lat])
+        deviceMarkersRef.current[imei] = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([lon, lat])
           .setPopup(popup)
           .addTo(map.current!);
       }
     });
 
-    // Remove markers for cattle that are no longer active
-    Object.keys(cowMarkersRef.current).forEach(id => {
-      if (!activeCattle.find(c => c.id === id)) {
-        cowMarkersRef.current[id].remove();
-        delete cowMarkersRef.current[id];
+    // Remove markers for devices that are no longer active/present
+    Object.keys(deviceMarkersRef.current).forEach(imei => {
+      if (!gpsDevices.find(d => d.imei === imei)) {
+        deviceMarkersRef.current[imei].remove();
+        delete deviceMarkersRef.current[imei];
       }
     });
 
-    animFrameRef.current = requestAnimationFrame(animateMarkers);
-  }, [mapReady, activeCattle]);
-
-  // Start animation loop once map and cattle are ready
-  useEffect(() => {
-    if (!mapReady || activeCattle.length === 0) return;
-    animFrameRef.current = requestAnimationFrame(animateMarkers);
-    setLastUpdate(new Date().toLocaleTimeString('id-ID'));
-    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [mapReady, animateMarkers, activeCattle.length]);
+    // Fly/Ease map to the first loaded GPS device dynamically
+    if (gpsDevices.length > 0) {
+      const firstDevice = gpsDevices[0];
+      const flon = parseFloat(firstDevice.longitude);
+      const flat = parseFloat(firstDevice.latitude);
+      if (!isNaN(flon) && !isNaN(flat)) {
+        map.current.easeTo({
+          center: [flon, flat],
+          zoom: 15,
+          duration: 1500
+        });
+      }
+    }
+  }, [mapReady, gpsDevices, activeCattle]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchCattle().finally(() => {
+    Promise.all([
+      fetchCattle(),
+      fetchGPSDevices()
+    ]).finally(() => {
       setLastUpdate(new Date().toLocaleTimeString('id-ID'));
       setIsRefreshing(false);
     });
   };
 
-  // Map init
+  // Map Initialization
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
     const container = mapContainer.current;
@@ -141,26 +191,26 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
               },
               layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 22 }],
             },
-            center: [FARM_LON, FARM_LAT],
-            zoom: 15,
+            center: [DEPOK_LON, DEPOK_LAT],
+            zoom: 14,
             pitch: 30,
             attributionControl: false,
           });
 
           map.current.on('load', () => {
             if (!map.current) return;
-            map.current.setCenter([FARM_LON, FARM_LAT]);
+            map.current.setCenter([DEPOK_LON, DEPOK_LAT]);
             map.current.resize();
 
-            // Farm HQ marker
+            // Office / Headquarters Marker in Depok
             const farmEl = document.createElement('div');
             farmEl.innerHTML = `
               <div style="display:flex;flex-direction:column;align-items:center;">
-                <div style="background:#006B3F;padding:4px 12px;border-radius:12px;border:2px solid white;color:white;font-weight:bold;font-size:13px;box-shadow:0 4px 12px rgba(0,107,63,0.4);white-space:nowrap;margin-bottom:4px;">🏠 Barbara Farm</div>
+                <div style="background:#006B3F;padding:4px 12px;border-radius:12px;border:2px solid white;color:white;font-weight:bold;font-size:13px;box-shadow:0 4px 12px rgba(0,107,63,0.4);white-space:nowrap;margin-bottom:4px;">🏠 Barbara Farm Office</div>
                 <div style="width:12px;height:12px;background:#006B3F;border:2px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>
               </div>`;
             new maplibregl.Marker({ element: farmEl, anchor: 'bottom' })
-              .setLngLat([FARM_LON, FARM_LAT])
+              .setLngLat([DEPOK_LON, DEPOK_LAT])
               .addTo(map.current!);
 
             setMapReady(true);
@@ -175,9 +225,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
 
     return () => {
       resizeObserver.disconnect();
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      Object.values(cowMarkersRef.current).forEach(m => m.remove());
-      cowMarkersRef.current = {};
+      Object.values(deviceMarkersRef.current).forEach(m => m.remove());
+      deviceMarkersRef.current = {};
       map.current?.remove();
       map.current = null;
     };
@@ -197,7 +246,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
           {lastUpdate && (
             <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
               <MapPin className="w-3 h-3 text-green-500" />
-              {activeCattle.length} sapi terdeteksi · Update: {lastUpdate}
+              {gpsDevices.length > 0 ? gpsDevices.length : 0} device GPS terdeteksi · Update: {lastUpdate}
             </p>
           )}
         </div>
@@ -218,6 +267,25 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
       </CardHeader>
       <CardContent>
         <div className="relative group">
+          {/* Real-time GPS Error Banner */}
+          {gpsError && (
+            <div className="absolute top-4 left-4 right-16 z-[1000] bg-red-50/95 backdrop-blur border border-red-200 rounded-xl p-3 shadow-lg flex items-center justify-between text-xs text-red-800 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-2 pr-4">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 animate-bounce" />
+                <div>
+                  <strong className="block text-[11px] font-bold">Koneksi Satelit GPS.id Terkendala</strong>
+                  <span className="text-red-600 font-mono text-[10px] line-clamp-1">{gpsError}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDiagModal(true)}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-colors shadow-sm ml-auto whitespace-nowrap"
+              >
+                Cek Log & Kredensial
+              </button>
+            </div>
+          )}
+
           <div
             ref={mapContainer}
             className="w-full h-[420px] rounded-xl overflow-hidden border border-border-neutral"
@@ -226,8 +294,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
           {/* Legend */}
           <div className="absolute left-4 bottom-4 bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg border border-gray-100 text-xs space-y-1.5">
             <p className="font-bold text-gray-700 mb-1">Legenda</p>
-            <div className="flex items-center gap-2"><span>🏠</span><span className="text-gray-600">Barbara Farm HQ</span></div>
-            <div className="flex items-center gap-2"><span>🐄</span><span className="text-gray-600">Sapi (GPS Simulasi)</span></div>
+            <div className="flex items-center gap-2"><span>🏠</span><span className="text-gray-600">Barbara Farm Office</span></div>
+            <div className="flex items-center gap-2"><span>🐄</span><span className="text-gray-600">Sapi (GPS Real-Time)</span></div>
           </div>
 
           {/* Custom Map Controls */}
@@ -245,6 +313,68 @@ const FarmMap: React.FC<FarmMapProps> = ({ className }) => {
             </button>
           </div>
         </div>
+
+        {/* Premium Connection Diagnostic Modal */}
+        {showDiagModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-gradient-to-r from-red-600 to-orange-600 p-5 text-white flex justify-between items-center">
+                <div>
+                  <h3 className="font-extrabold text-base">GPS.id Porta M20 Diagnostic</h3>
+                  <p className="text-white/80 text-[10px] mt-0.5">Integrasi Telemetri & Otorisasi Vendor</p>
+                </div>
+                <button onClick={() => setShowDiagModal(false)} className="text-white/80 hover:text-white font-bold text-base px-2">✕</button>
+              </div>
+              <div className="p-6 space-y-4 text-xs text-gray-700">
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 space-y-2">
+                  <p className="font-bold text-gray-800 text-[10px] uppercase tracking-wider mb-1 text-red-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
+                    Status Koneksi Saat Ini
+                  </p>
+                  <div className="flex justify-between border-b border-gray-200/50 pb-1.5 text-[11px]">
+                    <span className="text-gray-500">API Endpoint:</span>
+                    <span className="font-mono text-gray-800 font-semibold">/public/vehicle</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/50 pb-1.5 text-[11px]">
+                    <span className="text-gray-500">Status Response:</span>
+                    <span className="text-red-600 font-bold">API ERROR (500)</span>
+                  </div>
+                  <div className="flex flex-col pt-1">
+                    <span className="text-gray-500 mb-1 text-[11px]">Pesan Error Vendor Satelit:</span>
+                    <span className="bg-red-50 text-red-700 font-mono text-[9px] p-2.5 rounded-lg border border-red-100 leading-relaxed break-all">
+                      {gpsError}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 space-y-2">
+                  <p className="font-bold text-gray-800 text-[10px] uppercase tracking-wider mb-1 text-green-700 flex items-center gap-1.5">
+                    <span>🔑</span>
+                    Kredensial Vendor di Backend
+                  </p>
+                  <div className="flex justify-between border-b border-gray-200/50 pb-1.5 text-[11px]">
+                    <span className="text-gray-500">Username:</span>
+                    <span className="font-mono font-bold text-gray-900 bg-green-50 text-green-800 px-2 py-0.5 rounded">barbarafarm</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/50 pb-1.5 text-[11px]">
+                    <span className="text-gray-500">Password:</span>
+                    <span className="font-mono font-bold text-gray-900 bg-green-50 text-green-800 px-2 py-0.5 rounded">GPSid789</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 leading-relaxed pt-1.5 italic">
+                    💡 **Tip Analisa**: Vendor mengembalikan error `Username or password is wrong` atau `Too many requests` (terkena batasan laju panggilan). Silakan periksa apakah password di backend Anda sudah diubah dari default vendor (`GPSid789`).
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => { setShowDiagModal(false); handleRefresh(); }}
+                  className="w-full bg-[#006B3F] hover:bg-[#005230] text-white py-2.5 rounded-xl font-bold transition-all shadow-md text-[11px] mt-2 uppercase tracking-wider"
+                >
+                  Coba Hubungkan Ulang Satelit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

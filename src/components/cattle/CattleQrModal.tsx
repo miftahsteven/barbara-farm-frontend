@@ -14,7 +14,9 @@ export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose })
 
   const profileUrl = process.env.NEXT_PUBLIC_FRONTEND_URL
     ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/cattle/${encodeURIComponent(cattle.id)}`
-    : `https://barbara.mscode.id/cattle/${encodeURIComponent(cattle.id)}`;
+    : (typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.host}/cattle/${encodeURIComponent(cattle.id)}`
+      : `https://barbarafarm.id/cattle/${encodeURIComponent(cattle.id)}`);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
