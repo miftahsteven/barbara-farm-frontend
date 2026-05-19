@@ -62,7 +62,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
     temperature: number;
     timestamp: string;
   } | null>(null);
-  const [isAutoRefresh, setIsAutoRefresh] = useState(true);
+  const [isAutoRefresh, setIsAutoRefresh] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLostSignal, setIsLostSignal] = useState(false);
@@ -93,7 +93,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
       if (initialMode !== 'live') {
         setIsAutoRefresh(false);
       } else {
-        setIsAutoRefresh(true);
+        setIsAutoRefresh(false);
         setCountdown(60);
       }
     }
@@ -600,7 +600,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
             {mode === 'live' && isAutoRefresh && hasGpsTracker && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 border border-red-500/40 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                <span className="text-red-400 text-xs font-bold">LIVE (5s)</span>
+                <span className="text-red-400 text-xs font-bold">LIVE (1m)</span>
               </div>
             )}
           </div>
@@ -609,7 +609,7 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
             {hasGpsTracker && (
               <div className="flex bg-[#1a2f22] rounded-xl p-1 border border-[#1e3a28]">
                 <button
-                  onClick={() => { setMode('live'); setIsAutoRefresh(true); setCountdown(5); trailCoords.current = []; }}
+                  onClick={() => { setMode('live'); setIsAutoRefresh(false); setCountdown(60); trailCoords.current = []; }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'live' ? 'bg-red-500 text-white shadow-lg' : 'text-[#6b9e7e] hover:text-white'}`}
                 >
                   <Radio className="w-3.5 h-3.5" />
@@ -924,7 +924,13 @@ export const CattleTrackerModal: React.FC<CattleTrackerModalProps> = ({ cattle, 
                       {mode === 'live' ? (
                         <>
                           <button
-                            onClick={() => setIsAutoRefresh(prev => !prev)}
+                            onClick={() => setIsAutoRefresh(prev => {
+                              const next = !prev;
+                              if (next) {
+                                setCountdown(60);
+                              }
+                              return next;
+                            })}
                             className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm border transition-all ${
                               isAutoRefresh
                                 ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30 cursor-pointer'
