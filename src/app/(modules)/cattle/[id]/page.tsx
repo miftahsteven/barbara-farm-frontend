@@ -435,10 +435,10 @@ function CattleDetailPageContent({ params }: CattleDetailPageProps) {
                   <div className="w-64 h-64 flex items-center justify-center">
                     <QRCodeSVG 
                       value={typeof window !== 'undefined'
-                        ? `${window.location.protocol}//${window.location.host}/cattle/${encodeURIComponent(cattleData.id)}`
+                        ? `${window.location.protocol}//${window.location.host}/c/${encodeURIComponent(cattleData.id)}`
                         : (process.env.NEXT_PUBLIC_FRONTEND_URL 
-                          ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/cattle/${encodeURIComponent(cattleData.id)}` 
-                          : `https://barbarafarm.id/cattle/${encodeURIComponent(cattleData.id)}`
+                          ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/c/${encodeURIComponent(cattleData.id)}` 
+                          : `https://barbarafarm.id/c/${encodeURIComponent(cattleData.id)}`
                         )
                       }
                       size={200}

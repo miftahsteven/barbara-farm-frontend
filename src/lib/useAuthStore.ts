@@ -23,6 +23,20 @@ interface AuthState {
   logout: () => void;
 }
 
+// Helper: sync token to a cookie so Next.js middleware can read it.
+// localStorage is not accessible in middleware, but cookies are.
+const setAuthCookie = (token: string) => {
+  if (typeof document !== 'undefined') {
+    // SameSite=Lax so it's sent on top-level navigations (QR scan)
+    document.cookie = `bf-auth-token=${token}; path=/; SameSite=Lax; max-age=86400`;
+  }
+};
+const clearAuthCookie = () => {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'bf-auth-token=; path=/; SameSite=Lax; max-age=0';
+  }
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -32,14 +46,25 @@ export const useAuthStore = create<AuthState>()(
       requiresSetup2FA: false,
       tempUserId: null,
       qrCodeUrl: null,
-      setAuth: (user, token) => set({ user, token, requires2FA: false, requiresSetup2FA: false, tempUserId: null, qrCodeUrl: null }),
+      setAuth: (user, token) => {
+        setAuthCookie(token);
+        set({ user, token, requires2FA: false, requiresSetup2FA: false, tempUserId: null, qrCodeUrl: null });
+      },
       setRequires2FA: (userId) => set({ requires2FA: true, requiresSetup2FA: false, tempUserId: userId }),
       setRequiresSetup2FA: (userId) => set({ requires2FA: false, requiresSetup2FA: true, tempUserId: userId }),
       setQrCodeUrl: (url) => set({ qrCodeUrl: url }),
-      logout: () => set({ user: null, token: null, requires2FA: false, requiresSetup2FA: false, tempUserId: null, qrCodeUrl: null }),
+      logout: () => {
+        clearAuthCookie();
+        set({ user: null, token: null, requires2FA: false, requiresSetup2FA: false, tempUserId: null, qrCodeUrl: null });
+      },
     }),
     {
       name: 'auth-storage',
+      onRehydrateStorage: () => (state, error) => {
+        if (state?.token && !error) {
+          setAuthCookie(state.token);
+        }
+      },
     }
   )
 );

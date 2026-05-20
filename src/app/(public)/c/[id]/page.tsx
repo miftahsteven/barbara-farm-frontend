@@ -18,22 +18,31 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Cattle } from '@/lib/useCattleStore';
-import { useAuthStore, apiFetch } from '@/lib/useAuthStore';
+import { useAuthStore } from '@/lib/useAuthStore';
 
 export default function CattlePublicProfile() {
   const { id } = useParams();
+  const decodedId = typeof id === 'string' ? decodeURIComponent(id) : '';
   const router = useRouter();
   const { user } = useAuthStore();
   const [cattle, setCattle] = useState<Cattle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!decodedId) return;
     const fetchCattleData = async () => {
       try {
-        const response = await apiFetch(`/cattle/${id}`);
+        // Use relative URL → hits Next.js API route which proxies server-side.
+        // This works from any device (mobile, desktop) without exposing localhost.
+        const response = await fetch(`/api/public/cattle/${encodeURIComponent(decodedId)}`);
         if (response.ok) {
           const data = await response.json();
           setCattle(data);
+        } else if (response.status === 404) {
+          // Cattle not found — leave cattle as null
+          setCattle(null);
+        } else {
+          console.error("Failed to fetch cattle data:", response.status);
         }
       } catch (error) {
         console.error("Failed to fetch cattle data:", error);
@@ -43,7 +52,7 @@ export default function CattlePublicProfile() {
     };
 
     fetchCattleData();
-  }, [id]);
+  }, [decodedId]);
 
   if (isLoading) {
     return (
@@ -66,7 +75,7 @@ export default function CattlePublicProfile() {
           </div>
           <h1 className="text-2xl font-bold text-text-primary mb-2">Sapi Tidak Ditemukan</h1>
           <p className="text-text-secondary text-sm mb-8">
-            QR Code dengan ID <span className="font-mono font-bold text-primary-green">{id}</span> belum terdaftar di sistem Barbara Farm.
+            QR Code dengan ID <span className="font-mono font-bold text-primary-green">{decodedId}</span> belum terdaftar di sistem Barbara Farm.
           </p>
 
           {user ? (
@@ -82,7 +91,7 @@ export default function CattlePublicProfile() {
               <Button 
                 variant="primary" 
                 className="w-full py-4 flex items-center justify-center gap-2"
-                onClick={() => router.push(`/qr-scan?id=${id}`)}
+                onClick={() => router.push(`/qr-scan?id=${encodeURIComponent(decodedId)}`)}
               >
                 <Plus className="h-5 w-5" />
                 Daftarkan Sapi
@@ -233,35 +242,46 @@ export default function CattlePublicProfile() {
         </div>
 
         {/* CTA Section */}
-        {!user && (
-          <div className="p-8 bg-gradient-to-br from-[#17211B] to-[#006B3F] rounded-[3rem] text-white shadow-2xl shadow-[#006B3F]/30 relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute -left-10 -bottom-10 h-40 w-40 bg-white/5 rounded-full blur-2xl" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-white/10 rounded-xl border border-white/20">
-                  <ShieldCheck className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-black text-xl tracking-tight">Akses Khusus Staff</h3>
-                  <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Barbara Farm Internal</p>
-                </div>
+        <div className="p-8 bg-gradient-to-br from-[#17211B] to-[#006B3F] rounded-[3rem] text-white shadow-2xl shadow-[#006B3F]/30 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -left-10 -bottom-10 h-40 w-40 bg-white/5 rounded-full blur-2xl" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-white/10 rounded-xl border border-white/20">
+                <ShieldCheck className="h-6 w-6 text-white" />
               </div>
-              <p className="text-white/80 text-sm leading-relaxed mb-8 font-medium">
-                Punya akses ke kandang? Login untuk melihat riwayat medis lengkap, silsilah indukan, dan laporan pertumbuhan.
-              </p>
+              <div>
+                <h3 className="font-black text-xl tracking-tight">Akses Khusus Staff</h3>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Barbara Farm Internal</p>
+              </div>
+            </div>
+            <p className="text-white/80 text-sm leading-relaxed mb-8 font-medium">
+              {!user 
+                ? "Punya akses ke kandang? Login untuk mengedit profil, melihat riwayat medis lengkap, silsilah indukan, dan laporan pertumbuhan."
+                : "Anda masuk sebagai Staff. Lanjutkan ke Dashboard untuk mengelola data dan mengedit profil sapi ini."}
+            </p>
+            {!user ? (
               <Button 
                 variant="outline" 
                 className="w-full py-5 bg-white text-[#006B3F] border-white hover:bg-[#F7FAF8] rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl"
                 onClick={() => router.push('/login')}
               >
-                Masuk ke Dashboard
+                Edit Data (Login Staff)
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-            </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                className="w-full py-5 bg-white text-[#006B3F] border-white hover:bg-[#F7FAF8] rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl"
+                onClick={() => router.push(`/cattle/${encodeURIComponent(decodedId)}`)}
+              >
+                Kelola Data Sapi
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Mobile Footer Branding */}

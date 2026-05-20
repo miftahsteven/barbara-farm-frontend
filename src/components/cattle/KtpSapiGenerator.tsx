@@ -115,10 +115,39 @@ export const KtpSapiGenerator: React.FC<KtpSapiGeneratorProps> = ({
 
   const handleCopy = () => {
     if (result) {
-      navigator.clipboard.writeText(result.fullCode);
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(result.fullCode)
+          .then(() => {
+            setCopied(true);
+            toast.success('Kode KTP disalin!');
+            setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => fallbackCopyToClipboard());
+      } else {
+        fallbackCopyToClipboard();
+      }
+    }
+  };
+
+  const fallbackCopyToClipboard = () => {
+    if (!result) return;
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = result.fullCode;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
       setCopied(true);
       toast.success('Kode KTP disalin!');
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      toast.error('Gagal menyalin secara otomatis. Silakan salin manual.');
     }
   };
 

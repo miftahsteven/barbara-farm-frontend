@@ -12,15 +12,40 @@ interface CattleQrModalProps {
 export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose }) => {
   if (!cattle) return null;
 
+  // Always point to /c/[id] (public route) — not /cattle/[id] which requires auth.
   const profileUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.host}/cattle/${encodeURIComponent(cattle.id)}`
+    ? `${window.location.protocol}//${window.location.host}/c/${encodeURIComponent(cattle.id)}`
     : (process.env.NEXT_PUBLIC_FRONTEND_URL
-      ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/cattle/${encodeURIComponent(cattle.id)}`
-      : `https://barbarafarm.id/cattle/${encodeURIComponent(cattle.id)}`);
+      ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/c/${encodeURIComponent(cattle.id)}`
+      : `https://barbarafarm.id/c/${encodeURIComponent(cattle.id)}`);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(profileUrl);
-    alert('Link profil disalin!');
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(profileUrl)
+        .then(() => alert('Link profil disalin!'))
+        .catch(() => fallbackCopyToClipboard());
+    } else {
+      fallbackCopyToClipboard();
+    }
+  };
+
+  const fallbackCopyToClipboard = () => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = profileUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Link profil disalin!');
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      alert('Gagal menyalin link secara otomatis. Silakan salin URL secara manual.');
+    }
   };
 
   return (
@@ -84,9 +109,14 @@ export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose })
             </button>
           </div>
 
-          <button className="mt-6 flex items-center justify-center gap-2 mx-auto text-xs font-bold text-[#006B3F] hover:underline">
+          <a 
+            href={profileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="mt-6 flex items-center justify-center gap-2 mx-auto text-xs font-bold text-[#006B3F] hover:underline"
+          >
             Buka Halaman Publik <ExternalLink className="w-3 h-3" />
-          </button>
+          </a>
         </div>
       </div>
     </div>

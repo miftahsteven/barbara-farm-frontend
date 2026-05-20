@@ -200,8 +200,32 @@ export default function UserManagementPage() {
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Berhasil disalin ke clipboard")
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => toast.success("Berhasil disalin ke clipboard"))
+        .catch(() => fallbackCopyToClipboard(text));
+    } else {
+      fallbackCopyToClipboard(text);
+    }
+  }
+
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success("Berhasil disalin ke clipboard");
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      toast.error("Gagal menyalin secara otomatis. Silakan salin manual.");
+    }
   }
 
   const filteredUsers = users.filter(u =>
