@@ -95,28 +95,28 @@ export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose })
       }
       ctx.stroke();
 
-      // 3. Draw the QR code (centered, size 800x800)
-      const qrSize = 800;
+      // 3. Draw the QR code (centered, size 760x760 to avoid any overlap)
+      const qrSize = 760;
       const qrX = (canvas.width - qrSize) / 2;
       const qrY = 200;
       ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
 
-      // 4. Draw the ID Badge (like the pill in UI)
+      // 4. Draw the ID Badge (completely below the QR code, absolutely no overlap)
       const idText = cattle.id;
-      ctx.font = '900 48px sans-serif';
+      ctx.font = '900 40px sans-serif';
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'center';
       
       const textWidth = ctx.measureText(idText).width;
-      const pillWidth = Math.max(textWidth + 120, 480);
-      const pillHeight = 120;
+      const pillWidth = Math.max(textWidth + 100, 400);
+      const pillHeight = 100;
       const pillX = (canvas.width - pillWidth) / 2;
-      const pillY = qrY + qrSize - 60; // Overlapping the bottom of QR code just like UI!
+      const pillY = qrY + qrSize + 30; // Clean 30px gap below the QR code
 
       ctx.fillStyle = '#17211B';
       ctx.beginPath();
       if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 60);
+        ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 50);
       } else {
         ctx.rect(pillX, pillY, pillWidth, pillHeight);
       }
@@ -138,13 +138,13 @@ export const CattleQrModal: React.FC<CattleQrModalProps> = ({ cattle, onClose })
 
       // 6. Draw subtitle info at bottom
       ctx.fillStyle = '#17211B';
-      ctx.font = '800 52px sans-serif';
+      ctx.font = '800 48px sans-serif';
       const displayName = cattle.name ? `${cattle.name}` : `${cattle.breed}`;
-      ctx.fillText(displayName, canvas.width / 2, 1200);
+      ctx.fillText(displayName, canvas.width / 2, 1190);
 
       ctx.fillStyle = '#68746D';
-      ctx.font = 'bold 36px sans-serif';
-      ctx.fillText(`${cattle.breed} • ${cattle.gender}`, canvas.width / 2, 1270);
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillText(`${cattle.breed} • ${cattle.gender}`, canvas.width / 2, 1260);
 
       // Create download
       try {
